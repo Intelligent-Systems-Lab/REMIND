@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
 from prompt import rewrite_prompt
 from schema import CLASS_SCHEMA
+from dotenv import load_dotenv
 from numpy.linalg import norm
 from datetime import datetime
 from openai import OpenAI
 from tools import tools
 import numpy as np
 import weaviate
-import openai
+import os
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class Base(ABC):
     # 儲存
@@ -52,7 +56,7 @@ class LongMemory(Base):
                 self.vector = vector
             else:
                 if embedding_model=='openai':
-                    self.embedding_model = openai.embeddings
+                    self.embedding_model = client.embeddings
                 else:
                     print('Not support other embedding model now.')
                 self.vector = self._create_embedding_vector()
@@ -61,7 +65,7 @@ class LongMemory(Base):
                 input=self.text,
                 model="text-embedding-3-small"
             )
-            return response['data'][0]['embedding']
+            return response.data[0].embedding
         def add_child(self, child):
             self.children.append(child)
             
@@ -95,7 +99,6 @@ class LongMemory(Base):
             self.children.append(group_node)
         return
     def rewrite_merge_group(description_1, description_2):
-        client = OpenAI()
         messages = [{"role": "user", "content": rewrite_prompt.format(description_1=description_1, description_2=description_2)}]
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
