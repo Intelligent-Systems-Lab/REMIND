@@ -14,6 +14,12 @@ GROUP = {
     "child":list(CHILD) # the memories of the group
 }
 
+# Result of get relavant memory
+RELAVANT_MEMORY = {
+    "group_description":str, # the introduce of this memory group
+    "memory":list(CHILD) # relavant k memory
+}
+
 # Memory schema in the Weaviate
 CLASS_SCHEMA = {
     "class": "base",

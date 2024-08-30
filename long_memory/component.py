@@ -41,8 +41,12 @@ class Base(ABC):
         pass
 
 class LongMemory(Base):
-    def __init__(self):
+    def __init__(self, embedding_model='openai'):
         self.children = []
+        if embedding_model=='openai':
+            self.embedding_model = client.embeddings
+        else:
+            print('Not support other embedding model now.')
     class Node:
         def __init__(self, text, time=None, vector=None, origin_text=None, embedding_model='openai'):
             self.text = text
@@ -111,8 +115,41 @@ class LongMemory(Base):
         )
         res = eval(completion.choices[0].message.tool_calls[0].function.arguments)
         return res["rewrite"], res.get("description")
-    def get_relavant_memory():
-        pass
+    def get_relavant_memory(self, query:str, vector=None, k=5):
+        if vector:
+            print("Searching with provided vector")
+        else:
+            vector = self._create_embedding(query)
+        # 計算最相近 vector 的 group
+        threshold = 0.3
+        max_score = -1
+        most_similar_group = None
+        for child in self.children:
+            score = np.dot(vector, child.vector) / (norm(vector) * norm(child.vector))
+            if score > threshold:
+                if score > max_score:
+                    max_score = score
+                    most_similar_group = child
+        # 如果找不到相關記憶 (分數都不夠) 返回空
+        if not most_similar_group:
+            return
+        # 在 group 內計算相近 vector 的記憶並且排序
+        memory_list = []
+        for child in most_similar_group.children:
+            score = np.dot(vector, child.vector) / (norm(vector) * norm(child.vector))
+            memory_info = {
+                "score":score,
+                "text":child.text,
+                "time":child.time,
+                "origin_text":child.origin_text,
+            }
+            memory_list.append(memory_info)
+        memory_list.sort(key=lambda x: x['score'], reverse=True)
+        result = {
+            "group_description":most_similar_group.text,
+            "memory":memory_list[:k],
+        }
+        return result
     def update_group_memory():
         pass
     def update_single_memory():
@@ -123,6 +160,12 @@ class LongMemory(Base):
         pass
     def del_all_memory():
         pass
+    def _create_embedding(self, text):
+        response = self.embedding_model.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
 
 class WeaviateLongMemory(Base):
     def __init__(self, weaviate_url, class_name = "base"):
