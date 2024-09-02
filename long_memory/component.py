@@ -8,6 +8,7 @@ from openai import OpenAI
 from tools import tools
 import numpy as np
 import weaviate
+import json
 import os
 
 load_dotenv()
@@ -55,7 +56,7 @@ class LongMemory(Base):
             if time:
                 self.time = time
             else:
-                self.time = datetime.now()
+                self.time = datetime.now().strftime('%Y-%m-%d')
             if vector:
                 self.vector = vector
             else:
@@ -121,7 +122,7 @@ class LongMemory(Base):
         else:
             vector = self._create_embedding(query)
         # 計算最相近 vector 的 group
-        threshold = 0.3
+        threshold = 0.25
         max_score = -1
         most_similar_group = None
         for child in self.children:
@@ -160,6 +161,36 @@ class LongMemory(Base):
         pass
     def del_all_memory():
         pass
+    def export_memory(self):
+        group_list = []
+        for group in self.children:
+            group_text = group.text
+            child_list = []
+            for child in group.children:
+                child_dict = {
+                    "text":child.text,
+                    "time":child.time,
+                    "vector":child.vector, 
+                    "origin_text":child.origin_text,
+                }
+                child_list.append(child_dict)
+            group_dict = {
+                "description":group_text,
+                "child":child_list
+            }
+            group_list.append(group_dict)
+            
+        with open('long_memory.json', 'w') as f:
+            json.dump(group_list, f)
+        print('Memory export as long_memory.json')
+        return
+    def import_memory(self, memory_path:str):
+        with open(memory_path, 'r') as f:
+            memory = json.load(f)
+        print(f'Loading memory with {memory_path}')
+        for group in memory:
+            self.add_group_memory(group)
+        return
     def _create_embedding(self, text):
         response = self.embedding_model.create(
             input=text,
