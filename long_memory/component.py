@@ -103,7 +103,7 @@ class LongMemory(Base):
         else:
             self.children.append(group_node)
         return
-    def rewrite_merge_group(description_1, description_2):
+    def rewrite_merge_group(self, description_1, description_2):
         messages = [{"role": "user", "content": rewrite_prompt.format(description_1=description_1, description_2=description_2)}]
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -115,6 +115,12 @@ class LongMemory(Base):
             }
         )
         res = eval(completion.choices[0].message.tool_calls[0].function.arguments)
+        if res.get("description"):
+            print(f'-----rewrite two group-----')
+            print(f'First group description: {description_1}')
+            print(f'Second group description: {description_2}')
+            print(f'Merge description: {res.get("description")}')
+            print(f'---------------------------')
         return res["rewrite"], res.get("description")
     def get_relavant_memory(self, query:str, vector=None, k=5):
         if vector:
