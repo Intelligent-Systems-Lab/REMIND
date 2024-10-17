@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+deprecated/
+weaviate_data/
 
 # C extensions
 *.so
