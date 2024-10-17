@@ -21,8 +21,32 @@ RELAVANT_MEMORY = {
 }
 
 # Memory schema in the Weaviate
-CLASS_SCHEMA = {
-    "class": "base",
+# https://weaviate.io/developers/weaviate/config-refs/schema
+GROUP_SCHEMA = {
+    "class": "long_memory_group",
+    "description": "abstract of msg group",
+    "vectorIndexType": "hnsw",
+    "properties": [
+        {
+            "name": "time",
+            "dataType": ["date"]
+        },
+        {
+            "name": "text",
+            "dataType": ["text"],
+        },
+    ],
+    "moduleConfig": {
+        "text2vec-openai": {
+            "model": "text-embedding-3-small"
+        }
+    }
+}
+
+CHILD_SCHEMA = {
+    "class": "long_memory_child",
+    "description": "chat history",
+    "vectorIndexType": "hnsw",
     "properties": [
         {
             "name": "time",
@@ -31,6 +55,18 @@ CLASS_SCHEMA = {
         {
             "name": "text",
             "dataType": ["text"]
+        },
+        {
+            "name": "origin_text",
+            "dataType": ["text"],
+            "moduleConfig": {
+                "text2vec-openai": {"skip": "true"}
+            }
+        },
+    ],
+    "moduleConfig": {
+        "text2vec-openai": {
+            "model": "text-embedding-3-small"
         }
-    ]
+    }
 }
