@@ -266,7 +266,7 @@ class WeaviateLongMemory(Base):
         related_summaries = []
         for m in other_groups:
             related_summaries.append({
-                'id':m.uuid,
+                'id':str(m.uuid),
                 'text':m.properties['text']
             })
         result = {
