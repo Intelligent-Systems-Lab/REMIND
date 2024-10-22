@@ -48,25 +48,28 @@ class Base(ABC):
 class WeaviateLongMemory(Base):
     def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult"):
         self.client = weaviate.connect_to_local(weaviate_url, port)
+        self.user = user
         self.group_class_name = f"{user[0].upper()+user[1:]}_long_memory_group"
         self.child_class_name = f"{user[0].upper()+user[1:]}_long_memory_child"
         
+        self.group_class = self.client.collections.get(self.group_class_name)
+        self.child_class = self.client.collections.get(self.child_class_name)
+    
+    def _memory_exists(self):
         if self._class_exists(self.group_class_name):
-            print(f"Detect existed {user} user group memory space, loading...")
+            print(f"Detect existed {self.user} user group memory space, loading...")
         else:
             print("Detect empty group memory, create memory space...")
             GROUP_SCHEMA["class"] = self.group_class_name
             self._create_class(GROUP_SCHEMA)
         if self._class_exists(self.child_class_name):
-            print(f"Detect existed {user} user child memory space, loading...")
+            print(f"Detect existed {self.user} user child memory space, loading...")
         else:
             print("Detect empty child memory, create memory space...")
             CHILD_SCHEMA["class"] = self.child_class_name
             CHILD_SCHEMA["properties"] = CHILD_SCHEMA["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
             self._create_class(CHILD_SCHEMA)
-        self.group_class = self.client.collections.get(self.group_class_name)
-        self.child_class = self.client.collections.get(self.child_class_name)
-            
+    
     # 檢查這個 class 存不存在    
     def _class_exists(self, class_name):
         return self.client.collections.exists(class_name)
@@ -266,3 +269,4 @@ class WeaviateLongMemory(Base):
     def del_all_memory(self):
         self.client.collections.delete(self.child_class_name)
         self.client.collections.delete(self.group_class_name)
+        self._memory_exists()
