@@ -77,7 +77,34 @@ class WeaviateLongMemory(Base):
     # 創建 class schema
     def _create_class(self, class_schema):
         self.client.collections.create_from_dict(class_schema)
-        
+    
+    def show_groups(self, limit=5):
+        res = self.group_class.query.fetch_objects(
+            limit=limit
+        )
+        for object in res.objects:
+            print({
+                "id":object.uuid,
+                "text":object.properties['text']
+            })
+        return
+    
+    def show_all_groups(self):
+        for item in self.group_class.iterator():
+            print({
+                "id":item.uuid,
+                "text":item.properties['text']
+            })
+        return
+    
+    def show_all_children(self):
+        for item in self.child_class.iterator():
+            print({
+                "id":item.uuid,
+                "text":item.properties['text']
+            })
+        return
+    
     def get_schema(self):
         return self.client.collections.list_all()
     
