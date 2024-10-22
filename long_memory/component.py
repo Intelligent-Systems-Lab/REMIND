@@ -1,13 +1,16 @@
 from prompt import rewrite_prompt, classify_prompt, sublevel_prompt
-from weaviate.classes.query import MetadataQuery
 from schema import GROUP_SCHEMA, CHILD_SCHEMA
+
+from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
+import weaviate
+
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from datetime import datetime
 from openai import OpenAI
 from tools import tools
-import weaviate
+
 import json
 import os
 import re
@@ -84,7 +87,7 @@ class WeaviateLongMemory(Base):
         return completion.choices[0].message.content
     
     def add_article(self, article:str, summary_limit=100):
-        json_res = self._llm_create(article.format(summary_limit=summary_limit, article=article))
+        json_res = self._llm_create(sublevel_prompt.format(summary_limit=summary_limit, article=article))
         groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
         for group in groups['groups']:
             children = []
@@ -197,6 +200,7 @@ class WeaviateLongMemory(Base):
             print(f'Merge description: {res.get("description")}')
             print(f'---------------------------')
         return res["rewrite"], res.get("description")
+    
     def get_relevant_memory(self, query:str, k=5):
         response = self.group_class.query.near_text(
             query=query,
@@ -212,9 +216,28 @@ class WeaviateLongMemory(Base):
             group_id = similar_group.uuid
             group_description = similar_group.properties["text"]
             relative_memory = self.get_relavant_child(query, group_id)
-            return group_description, relative_memory, other_groups
+            retrieve_result = self._summary_retrieve_page(group_description, relative_memory, other_groups) 
+            return retrieve_result
         else:
             return {"system": "Don't find relevant memory"}
+    
+    def _summary_retrieve_page(self, group_description:str, relative_memory:list, other_groups:list):
+        similar_snippets = []
+        for m in relative_memory:
+            similar_snippets.append(m.properties["text"])
+        related_summaries = []
+        for m in other_groups:
+            related_summaries.append({
+                'id':m.uuid,
+                'text':m.properties['text']
+            })
+        result = {
+            "closest_summary":group_description,
+            "similar_snippets":similar_snippets,
+            "related_summaries":related_summaries
+        }
+        return result
+    
     def get_relavant_child(self, query:str, group_id=None, k=5):
         if group_id:
             response = self.child_class.query.near_text(
