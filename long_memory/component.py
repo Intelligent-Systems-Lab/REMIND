@@ -51,7 +51,7 @@ class WeaviateLongMemory(Base):
         self.user = user
         self.group_class_name = f"{user[0].upper()+user[1:]}_long_memory_group"
         self.child_class_name = f"{user[0].upper()+user[1:]}_long_memory_child"
-        
+        self._memory_exists()
         self.group_class = self.client.collections.get(self.group_class_name)
         self.child_class = self.client.collections.get(self.child_class_name)
     
@@ -66,9 +66,10 @@ class WeaviateLongMemory(Base):
             print(f"Detect existed {self.user} user child memory space, loading...")
         else:
             print("Detect empty child memory, create memory space...")
-            CHILD_SCHEMA["class"] = self.child_class_name
-            CHILD_SCHEMA["properties"] = CHILD_SCHEMA["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
-            self._create_class(CHILD_SCHEMA)
+            child_schema = CHILD_SCHEMA.copy()
+            child_schema["class"] = self.child_class_name
+            child_schema["properties"] = CHILD_SCHEMA["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
+            self._create_class(child_schema)
     
     # 檢查這個 class 存不存在    
     def _class_exists(self, class_name):
@@ -82,17 +83,17 @@ class WeaviateLongMemory(Base):
         res = self.group_class.query.fetch_objects(
             limit=limit
         )
-        for object in res.objects:
+        for item in res.objects:
             print({
-                "id":object.uuid,
-                "text":object.properties['text']
+                "id":str(item.uuid),
+                "text":item.properties['text']
             })
         return
     
     def show_all_groups(self):
         for item in self.group_class.iterator():
             print({
-                "id":item.uuid,
+                "id":str(item.uuid),
                 "text":item.properties['text']
             })
         return
@@ -100,7 +101,7 @@ class WeaviateLongMemory(Base):
     def show_all_children(self):
         for item in self.child_class.iterator():
             print({
-                "id":item.uuid,
+                "id":str(item.uuid),
                 "text":item.properties['text']
             })
         return
@@ -250,6 +251,13 @@ class WeaviateLongMemory(Base):
             return retrieve_result
         else:
             return {"system": "Don't find relevant memory"}
+        
+    def get_memory(self, query:str, k=5, recursive=False):
+        if not recursive:
+            return self.get_relevant_memory(query)
+        else:
+            
+            return
     
     def _summary_retrieve_page(self, group_description:str, relative_memory:list, other_groups:list):
         similar_snippets = []
