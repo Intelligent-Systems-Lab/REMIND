@@ -50,3 +50,53 @@ Don’t miss the origin article.
 ```
 Article:{article}
 """
+# (don't repeat previous evidence)
+recursive_search = """You are a search expert and you are searching for memories related to query from the memory bank.
+If you try searching several times, it is possible that you do not have this knowledge in your memory.
+The following will display your current search information and search records.
+
+Query:{query}
+
+Information found: {search_info}
+
+Search history, you will see during the entire search process: {search_history}
+
+You have three actions and the output is in json format, you can write your thought into think field, 
+relevant snippets paragraph into evidence field, 
+They will add to the search_history
+1.end: End the search when the information is sufficient
+```json
+{{
+    "action":"end",
+    "reason":"sufficient", # or insufficient
+    "think":"",
+    "evidence":"", 
+}}
+```
+2.jump: jump to related_summaries to search
+```json
+{{
+    "action":"jump",
+    "id":"", # id of related_summaries
+    "think":"",
+    "evidence":"",
+}}
+```
+3.retry: Search again using new keywords
+```json
+{{
+    "action":"retry",
+    "query':"", # search keywords, don’t be too similar to the previous keywords
+    "think':"",
+    "evidence":"",
+}}
+```
+"""
+
+search_history = {
+    "search times":0,
+    "used queries":[],
+    "searched memory":[],
+    "thought":"",
+    "evidence":[],
+}

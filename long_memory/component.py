@@ -1,4 +1,4 @@
-from prompt import rewrite_prompt, classify_prompt, sublevel_prompt
+from prompt import rewrite_prompt, classify_prompt, sublevel_prompt, search_history
 from schema import GROUP_SCHEMA, CHILD_SCHEMA
 
 from weaviate.classes.query import MetadataQuery
@@ -11,6 +11,7 @@ from datetime import datetime
 from openai import OpenAI
 from tools import tools
 
+import copy
 import json
 import os
 import re
@@ -66,7 +67,7 @@ class WeaviateLongMemory(Base):
             print(f"Detect existed {self.user} user child memory space, loading...")
         else:
             print("Detect empty child memory, create memory space...")
-            child_schema = CHILD_SCHEMA.copy()
+            child_schema = copy.deepcopy(CHILD_SCHEMA)
             child_schema["class"] = self.child_class_name
             child_schema["properties"] = CHILD_SCHEMA["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
             self._create_class(child_schema)
@@ -232,13 +233,18 @@ class WeaviateLongMemory(Base):
             print(f'---------------------------')
         return res["rewrite"], res.get("description")
     
-    def get_relevant_memory(self, query:str, k=5):
-        response = self.group_class.query.near_text(
-            query=query,
-            limit=k,
-            return_properties=["text"],
-            return_metadata=MetadataQuery(distance=True)
-        )
+    def get_relevant_memory(self, query:str, object_id=None, k=5):
+        if object_id:
+            response = self.group_class.query.fetch_objects(
+                filters=Filter.by_id().equal(object_id)
+            )
+        else:
+            response = self.group_class.query.near_text(
+                query=query,
+                limit=k,
+                return_properties=["text"],
+                return_metadata=MetadataQuery(distance=True)
+            )
         similar_groups = response.objects
         
         if similar_groups:
