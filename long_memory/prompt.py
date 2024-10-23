@@ -51,7 +51,7 @@ Don’t miss the origin article.
 Article:{article}
 """
 # (don't repeat previous evidence)
-recursive_search = """You are a search expert and you are searching for memories related to query from the memory bank.
+recall_search = """You are a search expert and you are searching for memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The following will display your current search information and search records.
 
@@ -92,11 +92,3 @@ They will add to the search_history
 }}
 ```
 """
-
-search_history = {
-    "search times":0,
-    "used queries":[],
-    "searched memory":[],
-    "thought":"",
-    "evidence":[],
-}

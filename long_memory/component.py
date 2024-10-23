@@ -1,5 +1,5 @@
-from prompt import rewrite_prompt, classify_prompt, sublevel_prompt, search_history
-from schema import GROUP_SCHEMA, CHILD_SCHEMA
+from prompt import rewrite_prompt, classify_prompt, sublevel_prompt, recall_search
+from schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
 
 from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
@@ -55,6 +55,7 @@ class WeaviateLongMemory(Base):
         self._memory_exists()
         self.group_class = self.client.collections.get(self.group_class_name)
         self.child_class = self.client.collections.get(self.child_class_name)
+        self.recall_search_records = []
     
     def _memory_exists(self):
         if self._class_exists(self.group_class_name):
@@ -258,12 +259,61 @@ class WeaviateLongMemory(Base):
         else:
             return {"system": "Don't find relevant memory"}
         
-    def get_memory(self, query:str, k=5, recursive=False):
-        if not recursive:
-            return self.get_relevant_memory(query)
+    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4):
+        question = query
+        if not recall:
+            return self.get_relevant_memory(query=query, k=retrieve_number)
         else:
-            
-            return
+            search_records = []
+            object_id = ""
+            history = copy.deepcopy(SEARCH_HISTORY)
+            for _ in range(turn):
+                retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
+                p = recall_search.format(query=query, search_info=retrieve_result, search_history=history)
+                llm_res = self._llm_create(p)
+                res_dict = json.loads(re.search(r"```json(.*?)```", llm_res, re.DOTALL).group(1).strip())
+                
+                # update search_history
+                history['search times']+=1
+                if query not in history['used queries']:
+                    history['used queries'].append(query)
+                if retrieve_result["closest_summary"] not in history['searched memory']:
+                    history['searched memory'].append(retrieve_result["closest_summary"])
+                if res_dict.get('evidence'):
+                    if type(res_dict.get('evidence'))==str:
+                        history['evidence'].append(res_dict.get('evidence'))
+                    else:
+                        history['evidence'].extend(res_dict.get('evidence'))
+                history['thought'] = res_dict['think']
+                record = {
+                    'search times':history['search times'],
+                    'used query':query,
+                    'searched memory':retrieve_result["closest_summary"],
+                    'thought':res_dict['think'],
+                    'evdience':history.get('evidence')
+                }
+                search_records.append(record)
+                
+                action = res_dict['action']
+                if action=='end':
+                    search_records.append({
+                        "end":res_dict['reason']
+                    })
+                    break
+                elif action=='jump':
+                    object_id = res_dict['id']
+                elif action=='retry':
+                    query=res_dict.get('query')
+                else:
+                    print(f'Action unknow:{action}')
+                    print(json.dumps(res_dict, indent=4))
+                    break
+            recall_search_record = {
+                "query":question,
+                "records":search_records
+            }
+            self.recall_search_records.append(recall_search_record)
+            return history
     
     def _summary_retrieve_page(self, group_description:str, relative_memory:list, other_groups:list):
         similar_snippets = []

@@ -14,10 +14,26 @@ GROUP = {
     "child":list(CHILD) # the memories of the group
 }
 
-# Result of get relavant memory
+# Result of search in the weaviate
 RELAVANT_MEMORY = {
     "group_description":str, # the introduce of this memory group
     "memory":list(CHILD) # relavant k memory
+}
+
+# Organize the RELAVANT_MEMORY and used in the prompt of recall_search
+SEARCH_INFO = {
+    "closest_summary":str,
+    "similar_snippets":list,
+    "related_summaries":list
+}
+
+# Search history used in the prompt of recall_search and final return in the recall stage
+SEARCH_HISTORY = {
+    "search times":0,
+    "used queries":[],
+    "searched memory":[],
+    "thought":"",
+    "evidence":[],
 }
 
 # Memory schema in the Weaviate
