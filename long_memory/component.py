@@ -108,6 +108,11 @@ class WeaviateLongMemory(Base):
             })
         return
     
+    def dump_recall_records(self):
+        for record in self.recall_search_records:
+            print(json.dumps(record, indent=4))
+        return self.recall_search_records
+    
     def get_schema(self):
         return self.client.collections.list_all()
     
