@@ -1,4 +1,4 @@
-from prompt import rewrite_prompt, classify_prompt, sublevel_prompt, recall_search
+from prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search
 from schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
 
 from weaviate.classes.query import MetadataQuery
@@ -98,7 +98,7 @@ class WeaviateLongMemory(Base):
                 "id":str(item.uuid),
                 "text":item.properties['text']
             })
-        return len(self.group_class.iterator())
+        return
     
     def show_all_children(self):
         for item in self.child_class.iterator():
@@ -106,7 +106,19 @@ class WeaviateLongMemory(Base):
                 "id":str(item.uuid),
                 "text":item.properties['text']
             })
-        return len(self.child_class.iterator())
+        return
+    
+    def group_count(self):
+        count = 0
+        for item in self.child_class.iterator():
+            count+=1
+        return count
+    
+    def child_count(self):
+        count = 0
+        for item in self.child_class.iterator():
+            count+=1
+        return count
     
     def dump_recall_records(self):
         for record in self.recall_search_records:
@@ -125,7 +137,7 @@ class WeaviateLongMemory(Base):
         return completion.choices[0].message.content
     
     def add_article(self, article:str, summary_limit=100):
-        json_res = self._llm_create(sublevel_prompt.format(summary_limit=summary_limit, article=article))
+        json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit, article=article))
         groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
         for group in groups['groups']:
             children = []
@@ -143,7 +155,7 @@ class WeaviateLongMemory(Base):
             self.add_group_memory(group)
             
     def add_chat_logs(self, chat_logs:str, summary_limit=50):
-        json_res = self._llm_create(classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
+        json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
         groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
         for group in groups['groups']:
             children = []

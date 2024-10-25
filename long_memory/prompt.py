@@ -2,23 +2,24 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
-classify_prompt = """Watch the following chat logs, group chat records according to topics and summarize each group with json format.
+chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
+Group chat records according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail as you can.
 The chat logs need change name to assistant or user.
 Don’t miss the conversation record.
 ```json
 {{
-    'groups':[
+    "groups": [
         {{
-            'summary':'user walked in the park today and saw some dogs and a parrot that can speak chinese',
-            'chat_logs':[
+            "summary": "user walked in the park today and saw some dogs and a parrot that can speak chinese",
+            "chat_logs": [
                 {{
-                    'assistant':'Hi, how are you today?',
-                    'user':'Good. I walked in the park today'
+                    "assistant": "Hi, how are you today?",
+                    "user": "Good. I walked in the park today"
                 }},
                 {{
-                    'assistant':'That's really gread! do you see any pets?',
-                    'user':'I saw dogs and a parrot, it can speak chinese!'
+                    "assistant": "That's really gread! do you see any pets?",
+                    "user": "I saw dogs and a parrot, it can speak chinese!"
                 }}
             ]
         }}
@@ -28,20 +29,20 @@ Don’t miss the conversation record.
 Chat logs:{chat_logs}
 """
 
-sublevel_prompt = """Watch the following article, group the article according to topics and summarize each group with json format.
+document_classify_prompt = """Watch the following article, group the article according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail as you can.
 Don’t miss the origin article.
 ```json
 {{
-    'groups':[
+    "groups": [
         {{
-            'summary':'abstract of AI future and challenge, and why it's important',
-            'paragraph':[
+            "summary": "abstract of AI future and challenge, and why it's important",
+            "paragraph": [
                 {{
-                    'text':'AI has been invested in many fields and plays an important role...'
+                    "text": "AI has been invested in many fields and plays an important role..."
                 }},
                 {{
-                    'text':'Most AI now is mainly driven by language models...'
+                    "text": "Most AI now is mainly driven by language models..."
                 }}
             ]
         }}
@@ -51,7 +52,7 @@ Don’t miss the origin article.
 Article:{article}
 """
 # (don't repeat previous evidence)
-recall_search = """You are a search expert and you are searching for memories related to query from the memory bank.
+recall_search = """Your character is assistant and you are searching your memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The following will display your current search information and search records.
 
