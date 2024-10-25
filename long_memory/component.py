@@ -98,7 +98,7 @@ class WeaviateLongMemory(Base):
                 "id":str(item.uuid),
                 "text":item.properties['text']
             })
-        return
+        return len(self.group_class.iterator())
     
     def show_all_children(self):
         for item in self.child_class.iterator():
@@ -106,7 +106,7 @@ class WeaviateLongMemory(Base):
                 "id":str(item.uuid),
                 "text":item.properties['text']
             })
-        return
+        return len(self.child_class.iterator())
     
     def dump_recall_records(self):
         for record in self.recall_search_records:
@@ -148,7 +148,13 @@ class WeaviateLongMemory(Base):
         for group in groups['groups']:
             children = []
             for log in group["chat_logs"]:
-                dialog = f"assistant:{log['assistant']}, user:{log['user']}"
+                dialog = ""
+                if log.get('assistant'):
+                    dialog+=f"assistant:{log['assistant']},"
+                if log.get('user'):
+                    dialog+=f"user:{log['user']}"
+                if not dialog:
+                    print(f"Error log, don't have any assistant or user, log:{log}")
                 child = {
                     "text":dialog,
                     "time":log.get('time') # time.now
