@@ -62,8 +62,9 @@ class WeaviateLongMemory(Base):
             print(f"Detect existed {self.user} user group memory space, loading...")
         else:
             print("Detect empty group memory, create memory space...")
-            GROUP_SCHEMA["class"] = self.group_class_name
-            self._create_class(GROUP_SCHEMA)
+            group_schema = copy.deepcopy(GROUP_SCHEMA)
+            group_schema["class"] = self.group_class_name
+            self._create_class(group_schema)
         if self._class_exists(self.child_class_name):
             print(f"Detect existed {self.user} user child memory space, loading...")
         else:
