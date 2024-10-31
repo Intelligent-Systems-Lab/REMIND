@@ -7,7 +7,6 @@ import weaviate
 
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
-from datetime import datetime
 from openai import OpenAI
 
 import copy
@@ -96,14 +95,15 @@ class WeaviateShortMemory(Base):
             }
             self._insert_weaviate(data)
     
-    def get_relevant_memory(self, query:str, method="similarity", k=5):
+    def get_relevant_memory(self, query:str, method="similarity", k=5, sort=True):
         """search relvant memory
 
         Args:
-            query (str): the query you want to search
+            query (str): the query you want to search.
             method (str): [similarity/keyword/BM25] Search method, 'similarity' for vector-based similarity search,
                           'keyword' for substring matching, 'BM25' use bm25 algorithm. Defaults to "similarity".
-            k (int): number of relevant memory
+            k (int): number of relevant memory.
+            sort (bool): If true, the retrieve chat log will sort with ascending, Defaults to True.
         """
         if method=="similarity":
             response = self.chatlog_class.query.near_text(
@@ -132,7 +132,10 @@ class WeaviateShortMemory(Base):
             return
         retrieve_memory = []
         for data in response.objects:
-            retrieve_memory.append(data.properties['text'])
+            retrieve_memory.append({"text":data.properties['text'], "time":data.properties['time']})
+        if sort:
+            retrieve_memory = sorted(retrieve_memory, key=lambda x: x["time"])
+        retrieve_memory = [{"text": item["text"], "time": item["time"].strftime("%m/%d %H:%M")} for item in retrieve_memory]
         res = {
             "retrieve_memory":retrieve_memory
         }
@@ -144,3 +147,27 @@ class WeaviateShortMemory(Base):
             vector=vector
         )
         return data_id
+    
+    def show_memory(self):
+        for item in self.chatlog_class.iterator():
+            print({
+                "id":str(item.uuid),
+                "text":item.properties['text'],
+                "time":item.properties['time'].strftime("%m/%d %H:%M")
+            })
+            
+    def dump_memory(self, clear=True):
+        data = []
+        for item in self.chatlog_class.iterator():
+            data.append({
+                "text":item.properties['text'],
+                "time":item.properties['time']
+            })
+        if clear:
+            self.client.collections.delete(self.chatlog_class_name)
+            self._memory_exists()
+        return data
+    
+    def del_memory(self):
+        self.client.collections.delete(self.chatlog_class_name)
+        self._memory_exists()
