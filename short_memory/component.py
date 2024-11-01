@@ -13,7 +13,6 @@ import copy
 import os
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class Base(ABC):
     # 添加
@@ -28,6 +27,7 @@ class Base(ABC):
 class WeaviateShortMemory(Base):
     def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult"):
         self.client = weaviate.connect_to_local(weaviate_url, port)
+        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.user = user
         self.chatlog_class_name = f"{user[0].upper()+user[1:]}_short_memory_chatlog"
         self._memory_exists()
@@ -52,7 +52,7 @@ class WeaviateShortMemory(Base):
         
     def _llm_create(self, prompt):
         messages = [{"role": "user", "content": prompt}]
-        completion = client.chat.completions.create(
+        completion = self.openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
         )
