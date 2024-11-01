@@ -1,5 +1,5 @@
-from schema import LOG_SCHEMA
-from prompt import generate_keyword
+from short_memory.schema import LOG_SCHEMA
+from short_memory.prompt import generate_keyword
 
 from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
@@ -149,12 +149,17 @@ class WeaviateShortMemory(Base):
         return data_id
     
     def show_memory(self):
+        data = []
         for item in self.chatlog_class.iterator():
-            print({
+            data.append({
                 "id":str(item.uuid),
                 "text":item.properties['text'],
-                "time":item.properties['time'].strftime("%m/%d %H:%M")
+                "time":item.properties['time']
             })
+        data = sorted(data, key=lambda x: x["time"])
+        data = [{"text": item["text"], "time": item["time"].strftime("%m/%d %H:%M")} for item in data]
+        for log in data:
+            print(log)
             
     def dump_memory(self, clear=True):
         data = []
@@ -163,6 +168,7 @@ class WeaviateShortMemory(Base):
                 "text":item.properties['text'],
                 "time":item.properties['time']
             })
+        data = sorted(data, key=lambda x: x["time"])
         if clear:
             self.client.collections.delete(self.chatlog_class_name)
             self._memory_exists()

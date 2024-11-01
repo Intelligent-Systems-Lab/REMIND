@@ -1,5 +1,6 @@
-from prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search
-from schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
+from long_memory.prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search
+from long_memory.schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
+from long_memory.tools import tools
 
 from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
@@ -9,7 +10,6 @@ from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from datetime import datetime
 from openai import OpenAI
-from tools import tools
 
 import copy
 import json
@@ -43,7 +43,7 @@ class Base(ABC):
     def del_single_memory():
         pass
     @abstractmethod
-    def del_all_memory():
+    def del_memory():
         pass
 
 class WeaviateLongMemory(Base):
@@ -381,7 +381,7 @@ class WeaviateLongMemory(Base):
         pass
     def del_single_memory():
         pass
-    def del_all_memory(self):
+    def del_memory(self):
         self.client.collections.delete(self.child_class_name)
         self.client.collections.delete(self.group_class_name)
         self._memory_exists()

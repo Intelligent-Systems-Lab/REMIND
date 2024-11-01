@@ -4,7 +4,7 @@ if not, rewrite a new description"""
 
 chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
 Group chat records according to topics and summarize each group with json format.
-Each summary can't over {summary_limit} and need as detail as you can.
+Each summary can't over {summary_limit} and need as detail like date, where or do what as you can.
 The chat logs need change name to assistant or user.
 Don’t miss the conversation record.
 ```json
