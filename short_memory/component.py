@@ -21,7 +21,7 @@ class Base(ABC):
         pass
     # 取得
     @abstractmethod
-    def get_relevant_memory():
+    def get_memory():
         pass
     
 class WeaviateShortMemory(Base):
@@ -95,7 +95,7 @@ class WeaviateShortMemory(Base):
             }
             self._insert_weaviate(data)
     
-    def get_relevant_memory(self, query:str, method="similarity", k=5, sort=True):
+    def get_memory(self, query:str, method="similarity", k=5, sort=True):
         """search relvant memory
 
         Args:
