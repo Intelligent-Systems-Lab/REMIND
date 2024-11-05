@@ -1,6 +1,6 @@
 from long_memory.component import WeaviateLongMemory
 from short_memory.component import WeaviateShortMemory
-from prompt import compress_conversation
+from prompt import compress_conversation_prompt, generate_answer_prompt
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -28,18 +28,37 @@ class MemLLM():
         self.prompt = ""
         
     # 運行
-    def run(slef):
+    def run(self, end_clear=False):
         # 運行
-        # 輸入
-        # 檢查輸入大小
-        # 進行搜尋
-        # 組裝 prompt
-        # 回答
-        # 檢查整體 prompt 大小
-        # 重複
+        print("Starting chat, type 'exit' to exit")
+        while True:
+            # 輸入
+            user_query = input(":")
+            if user_query=="exit":
+                break
+            # 檢查輸入大小
+            if self._check_input_limit(user_query):
+                print("Please try again.")
+            else:
+                # 進行搜尋
+                long_mem_result, short_mem_result = self.get_memory(user_query)
+                # 組裝 prompt
+                generate_prompt = generate_answer_prompt.format(
+                    chat_history=str(self.msg_queue),
+                    short_relevant_memory=str(short_mem_result),
+                    long_relevant_memory=str(long_mem_result),
+                    user_message=user_query)
+                # 回答
+                res = self._llm_create(generate_prompt)
+                print(f"assistant:{res}")
+                # 處理 prompt 大小
+                self._handle_context_limit()
+                # 重複
         # session end
-        # 清空 pre msg, msg queue
-        # 將 short memory 紀錄導入 long memory
+        if end_clear:
+            # 清空 pre msg, msg queue
+            self.msg_queue.clear()
+            self.pre_msg_queue.clear()
         return
     
     def _llm_create(self, prompt):
@@ -55,7 +74,7 @@ class MemLLM():
         # 導入到 short memory
         self.short_memory.add_chatlogs(self.msg_queue)
         # 將對話紀錄壓縮成一句話
-        json_res = self._llm_create(compress_conversation.format(chat_logs=self.msg_queue))
+        json_res = self._llm_create(compress_conversation_prompt.format(chat_logs=self.msg_queue))
         res = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
         # 清空對話紀錄
         self.msg_queue.clear()
@@ -63,7 +82,7 @@ class MemLLM():
         self.pre_msg_queue.append(res['text'])
         print("Done.")
     # 將 short memory 導入至 long memory
-    def _save_to_long_memory(self):
+    def save_to_long_memory(self):
         data = self.short_memory.dump_memory(True)
         self.long_memory.add_chat_logs(data)
         print('Short memory dump to Long memory.')
@@ -89,7 +108,16 @@ class MemLLM():
         tokens = encoding.encode(text)
         return len(tokens)
     # 從 memory 中找尋記憶
-    def _get_memory(self, query:str):
+    def get_memory(self, query:str):
+        """retrieve relevant memory from long memory & short memory
+
+        Args:
+            query (str): user query
+
+        Returns:
+            long_mem_result: the result find in long memory
+            short_mem_result: the result find in short memory
+        """
         long_mem_result = self.long_memory.get_memory(query)
         short_mem_result = self.short_memory.get_memory(query)
-        pass
+        return long_mem_result, short_mem_result
