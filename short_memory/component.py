@@ -66,7 +66,8 @@ class WeaviateShortMemory(Base):
                 ```
                 {
                     "assistant":"Hi, how are you today?",
-                    "user":"fine, how about you?"
+                    "user":"fine, how about you?",
+                    "time": "2024-10-31T04:18:00Z" (Optional)
                 }
                 ```
         """
@@ -81,7 +82,8 @@ class WeaviateShortMemory(Base):
                 ```
                 {
                     "assistant":"Hi, how are you today?",
-                    "user":"fine, how about you?"
+                    "user":"fine, how about you?",
+                    "time": "2024-10-31T04:18:00Z" (Optional)
                 }
                 ```
         """
@@ -157,7 +159,7 @@ class WeaviateShortMemory(Base):
                 "time":item.properties['time']
             })
         data = sorted(data, key=lambda x: x["time"])
-        data = [{"text": item["text"], "time": item["time"].strftime("%m/%d %H:%M")} for item in data]
+        data = [{"text": item["text"], "time": item["time"].strftime("%Y-%m-%dT %H:%M")} for item in data]
         for log in data:
             print(log)
             
@@ -168,7 +170,6 @@ class WeaviateShortMemory(Base):
                 "text":item.properties['text'],
                 "time":item.properties['time']
             })
-        data = sorted(data, key=lambda x: x["time"])
         if clear:
             self.client.collections.delete(self.chatlog_class_name)
             self._memory_exists()

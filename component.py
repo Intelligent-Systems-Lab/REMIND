@@ -2,6 +2,8 @@ from long_memory.component import WeaviateLongMemory
 from short_memory.component import WeaviateShortMemory
 from prompt import compress_conversation_prompt, generate_answer_prompt
 
+from datetime import datetime, timezone, timedelta
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from openai import OpenAI
 import tiktoken
@@ -30,7 +32,7 @@ class MemLLM():
     # 運行
     def run(self, end_clear=False):
         # 運行
-        print("Starting chat, type 'exit' to exit")
+        print("\033[33mStarting chat, type 'exit' to exit\033[0m")
         while True:
             # 輸入
             user_query = input(":")
@@ -38,19 +40,27 @@ class MemLLM():
                 break
             # 檢查輸入大小
             if self._check_input_limit(user_query):
-                print("Please try again.")
+                print("\033[33mPlease try again.\033[0m")
             else:
                 # 進行搜尋
                 long_mem_result, short_mem_result = self.get_memory(user_query)
                 # 組裝 prompt
                 generate_prompt = generate_answer_prompt.format(
-                    chat_history=str(self.msg_queue),
+                    chat_history=str(self.pre_msg_queue)+str(self.msg_queue),
                     short_relevant_memory=str(short_mem_result),
                     long_relevant_memory=str(long_mem_result),
                     user_message=user_query)
                 # 回答
                 res = self._llm_create(generate_prompt)
+                print(f"user:{user_query}")
                 print(f"assistant:{res}")
+                # 儲存對話
+                msg = {
+                    "user":user_query,
+                    "assistant":res,
+                    "time":datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%dT%H:%M:%SZ")
+                }
+                self.msg_queue.append(msg)
                 # 處理 prompt 大小
                 self._handle_context_limit()
                 # 重複
@@ -70,7 +80,7 @@ class MemLLM():
         return completion.choices[0].message.content
     # 壓縮到 short memory
     def _extract_to_short_memory(self):
-        print("Extracting chat log to short memory...")
+        print("\033[34mExtracting chat log to short memory...\033[0m")
         # 導入到 short memory
         self.short_memory.add_chatlogs(self.msg_queue)
         # 將對話紀錄壓縮成一句話
@@ -80,7 +90,7 @@ class MemLLM():
         self.msg_queue.clear()
         # 將壓縮句子加入
         self.pre_msg_queue.append(res['text'])
-        print("Done.")
+        print("\033[34mDone.\033[0m")
     # 將 short memory 導入至 long memory
     def save_to_long_memory(self):
         data = self.short_memory.dump_memory(True)
@@ -118,6 +128,10 @@ class MemLLM():
             long_mem_result: the result find in long memory
             short_mem_result: the result find in short memory
         """
-        long_mem_result = self.long_memory.get_memory(query)
-        short_mem_result = self.short_memory.get_memory(query)
+        print('\033[31mSearch long memory, short memory\033[0m')
+        with ThreadPoolExecutor() as executor:
+            future1 = executor.submit(self.long_memory.get_memory, query)
+            future2 = executor.submit(self.short_memory.get_memory, query)
+        long_mem_result = future1.result()
+        short_mem_result = future2.result()
         return long_mem_result, short_mem_result
