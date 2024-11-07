@@ -161,15 +161,8 @@ class WeaviateLongMemory(Base):
         for group in groups['groups']:
             children = []
             for log in group["chat_logs"]:
-                dialog = ""
-                if log.get('assistant'):
-                    dialog+=f"assistant:{log['assistant']},"
-                if log.get('user'):
-                    dialog+=f"user:{log['user']}"
-                if not dialog:
-                    print(f"Error log, don't have any assistant or user, log:{log}")
                 child = {
-                    "text":dialog,
+                    "text":log.get('text'),
                     "time":log.get('time') # time.now
                     # "origin_text":log.get('origin_text')
                 }

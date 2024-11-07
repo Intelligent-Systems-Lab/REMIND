@@ -170,7 +170,9 @@ class WeaviateShortMemory(Base):
                 "text":item.properties['text'],
                 "time":item.properties['time']
             })
+        print("Dump short memory success.")
         if clear:
+            print("clean the short memory...")
             self.client.collections.delete(self.chatlog_class_name)
             self._memory_exists()
         return data

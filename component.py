@@ -26,8 +26,8 @@ class MemLLM():
         else:
             self.long_memory = long_memory
         self.msg_queue = []
-        self.pre_msg_queue = []
-        self.prompt = ""
+        self.pre_msg = ""
+        self.current_prompt = ""
         
     # 運行
     def run(self, end_clear=False):
@@ -46,10 +46,11 @@ class MemLLM():
                 long_mem_result, short_mem_result = self.get_memory(user_query)
                 # 組裝 prompt
                 generate_prompt = generate_answer_prompt.format(
-                    chat_history=str(self.pre_msg_queue)+str(self.msg_queue),
+                    chat_history=f"{self.pre_msg}, {self.msg_queue}",
                     short_relevant_memory=str(short_mem_result),
                     long_relevant_memory=str(long_mem_result),
                     user_message=user_query)
+                self.current_prompt = generate_prompt
                 # 回答
                 res = self._llm_create(generate_prompt)
                 print(f"user:{user_query}")
@@ -84,12 +85,11 @@ class MemLLM():
         # 導入到 short memory
         self.short_memory.add_chatlogs(self.msg_queue)
         # 將對話紀錄壓縮成一句話
-        json_res = self._llm_create(compress_conversation_prompt.format(chat_logs=self.msg_queue))
-        res = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+        res = self._llm_create(compress_conversation_prompt.format(chat_logs=self.msg_queue))
         # 清空對話紀錄
         self.msg_queue.clear()
         # 將壓縮句子加入
-        self.pre_msg_queue.append(res['text'])
+        self.pre_msg = res
         print("\033[34mDone.\033[0m")
     # 將 short memory 導入至 long memory
     def save_to_long_memory(self):
