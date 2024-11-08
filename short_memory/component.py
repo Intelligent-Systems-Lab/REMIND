@@ -170,6 +170,7 @@ class WeaviateShortMemory(Base):
                 "text":item.properties['text'],
                 "time":item.properties['time']
             })
+        data = sorted(data, key=lambda x: x["time"])
         print("Dump short memory success.")
         if clear:
             print("clean the short memory...")

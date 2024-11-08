@@ -5,7 +5,7 @@ if not, rewrite a new description"""
 chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
 Group chat records according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail like date, where or do what as you can.
-Don't miss the conversation record.
+Chat logs must be origin chat logs, no reduce.
 ```json
 {{
     "groups": [

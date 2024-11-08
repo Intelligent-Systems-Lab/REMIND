@@ -56,6 +56,9 @@ class WeaviateLongMemory(Base):
         self.group_class = self.client.collections.get(self.group_class_name)
         self.child_class = self.client.collections.get(self.child_class_name)
         self.recall_search_records = []
+        
+        self.origin_chat_logs=""
+        self.classify_chat_logs=""
     
     def _memory_exists(self):
         if self._class_exists(self.group_class_name):
@@ -155,9 +158,33 @@ class WeaviateLongMemory(Base):
             }
             self.add_group_memory(group)
             
-    def add_chat_logs(self, chat_logs:str, summary_limit=50):
-        json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
-        groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+    def add_chat_logs(self, chat_logs:list, summary_limit=50):
+        # TODO: need a more clever way to classify chat_logs, if the origin text too large.
+        # TODO: need check chat_logs if too large.
+        while 1:
+            json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
+            groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+            # 檢查有沒有資訊遺失, 如果分組後數據比原始數據還要小於10就重新產生數據
+            origin_chat_logs_number = 0
+            for log in chat_logs:
+                origin_chat_logs_number+=len(log.get('text'))
+            classify_chat_logs_number = 0
+            for group in groups['groups']:
+                for log in group["chat_logs"]:
+                    classify_chat_logs_number+=len(log.get('text'))
+            if classify_chat_logs_number/origin_chat_logs_number < 0.65:
+                print("\033[34mClassify chat logs seems 35% smaller than Origin chat logs..\033[0m")
+                print(f"Origin chat logs number:{origin_chat_logs_number}, Classify chat logs number:{classify_chat_logs_number}, Compress rate:{round(classify_chat_logs_number/origin_chat_logs_number, 1)*100}%")
+                self.origin_chat_logs = chat_logs
+                self.classify_chat_logs = groups
+                print("\033[34mClassify again...\033[0m")
+            elif origin_chat_logs_number/classify_chat_logs_number==1:
+                print("\033[34mFully classify, no infomation missing\033[0m")
+                break
+            else:
+                print(f"\033[34mCompress rate:{round(classify_chat_logs_number/origin_chat_logs_number, 1)*100}%\033[0m")
+                break
+        print("\033[34mAdding to long memory...\033[0m")
         for group in groups['groups']:
             children = []
             for log in group["chat_logs"]:
@@ -172,6 +199,7 @@ class WeaviateLongMemory(Base):
                 "child":children
             }
             self.add_group_memory(group)
+        print("\033[34mSave chat logs to long memory done.\033[0m")
             
     def add_group_memory(self, group:dict):
         
