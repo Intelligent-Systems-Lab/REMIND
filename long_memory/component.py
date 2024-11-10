@@ -159,39 +159,50 @@ class WeaviateLongMemory(Base):
             self.add_group_memory(group)
             
     def add_chat_logs(self, chat_logs:list, summary_limit=50):
+        """add chat logs to long memory
+
+        Args:
+            chat_logs (list): list of chat log, chat log needs be following format
+                ```
+                {
+                    "text":"user:Hi, how are you today?, assistant:fine, how about you?",
+                    "time": "2024-10-31T04:18:00Z" (Optional)
+                }
+                ```
+            summary_limit (int, optional): the limit number of the summary group. Defaults to 50.
+        """
         # TODO: need a more clever way to classify chat_logs, if the origin text too large.
         # TODO: need check chat_logs if too large.
+        
+        for i, log in enumerate(chat_logs):
+            log['id'] = i
+        log_set = set(range(0, len(chat_logs)))
+        
         while 1:
+            # TODO: del time to reduce prompt use
             json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
             groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
-            # 檢查有沒有資訊遺失, 如果分組後數據比原始數據還要小於10就重新產生數據
-            origin_chat_logs_number = 0
-            for log in chat_logs:
-                origin_chat_logs_number+=len(log.get('text'))
-            classify_chat_logs_number = 0
+            # 檢查有沒有資訊遺失
+            classify_set = set()
             for group in groups['groups']:
-                for log in group["chat_logs"]:
-                    classify_chat_logs_number+=len(log.get('text'))
-            if classify_chat_logs_number/origin_chat_logs_number < 0.65:
-                print("\033[34mClassify chat logs seems 35% smaller than Origin chat logs..\033[0m")
-                print(f"Origin chat logs number:{origin_chat_logs_number}, Classify chat logs number:{classify_chat_logs_number}, Compress rate:{round(classify_chat_logs_number/origin_chat_logs_number, 1)*100}%")
-                self.origin_chat_logs = chat_logs
-                self.classify_chat_logs = groups
-                print("\033[34mClassify again...\033[0m")
-            elif origin_chat_logs_number/classify_chat_logs_number==1:
-                print("\033[34mFully classify, no infomation missing\033[0m")
-                break
+                classify_set.update(group.get('chat_logs'))
+            print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
+            self.origin_chat_logs = chat_logs
+            self.classify_chat_logs = groups
+            if log_set != classify_set:
+                print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}")
             else:
-                print(f"\033[34mCompress rate:{round(classify_chat_logs_number/origin_chat_logs_number, 1)*100}%\033[0m")
+                print(f"Fully classify")
                 break
+            
         print("\033[34mAdding to long memory...\033[0m")
         for group in groups['groups']:
             children = []
-            for log in group["chat_logs"]:
+            for chat_log_id in group["chat_logs"]:
+                log = [item for item in chat_logs if item.get('id') == chat_log_id][0]
                 child = {
                     "text":log.get('text'),
-                    "time":log.get('time') # time.now
-                    # "origin_text":log.get('origin_text')
+                    "time":log.get('time')
                 }
                 children.append(child)
             group = {

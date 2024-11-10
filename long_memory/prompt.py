@@ -5,20 +5,17 @@ if not, rewrite a new description"""
 chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
 Group chat records according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail like date, where or do what as you can.
-Chat logs must be origin chat logs, no reduce.
+Example:
+Chat logs:[
+    {{'id':1, 'text':'assistant:Hi, how are you today?, user:Good. I walked in the park today'}},
+    {{'id':2, 'text':'user:I saw dogs and a parrot, it can speak chinese!, assistant:That's really gread!'}}
+]
 ```json
 {{
     "groups": [
         {{
             "summary": "user walked in the park today and saw some dogs and a parrot that can speak chinese",
-            "chat_logs": [
-                {{
-                    "text":"assistant:Hi, how are you today?, user:Good. I walked in the park today",
-                }},
-                {{
-                    "text": "user:I saw dogs and a parrot, it can speak chinese!, assistant:That's really gread!",
-                }}
-            ]
+            "chat_logs": [1, 2]
         }}
     ]
 }}

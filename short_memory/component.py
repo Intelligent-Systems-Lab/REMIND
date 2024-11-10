@@ -65,8 +65,8 @@ class WeaviateShortMemory(Base):
             chatlogs (list): a list of chatlog, chatlog needs be following format
                 ```
                 {
-                    "assistant":"Hi, how are you today?",
-                    "user":"fine, how about you?",
+                    "user":"Hi, how are you today?",
+                    "assistant":"fine, how about you?",
                     "time": "2024-10-31T04:18:00Z" (Optional)
                 }
                 ```
@@ -81,8 +81,8 @@ class WeaviateShortMemory(Base):
             chatlog (dict): needs be following format
                 ```
                 {
-                    "assistant":"Hi, how are you today?",
-                    "user":"fine, how about you?",
+                    "user":"Hi, how are you today?",
+                    "assistant":"fine, how about you?",
                     "time": "2024-10-31T04:18:00Z" (Optional)
                 }
                 ```
@@ -92,7 +92,7 @@ class WeaviateShortMemory(Base):
         else:
             # save to weaviate
             data = {
-                "text":f"assistant:{chatlog['assistant']}, user:{chatlog['user']}",
+                "text":f"user:{chatlog['user']}, assistant:{chatlog['assistant']}",
                 "time":chatlog.get('time')
             }
             self._insert_weaviate(data)
