@@ -4,7 +4,9 @@ __pycache__/
 *$py.class
 deprecated/
 weaviate_data/
+
 test.jsonl
+question_sets.json
 
 # C extensions
 *.so
