@@ -7,6 +7,7 @@ weaviate_data/
 
 test.jsonl
 question_sets.json
+question_ready.json
 
 # C extensions
 *.so
