@@ -57,7 +57,7 @@ Information found: {search_info}
 Search history, you will see during the entire search process: {search_history}
 
 You have three actions and the output is in json format, you can write your thought into think field, 
-relevant snippets paragraph into evidence field, 
+the evidence field preferably original memory from similar_snippets, 
 They will add to the search_history
 1.end: End the search when the information is sufficient
 ```json
@@ -81,7 +81,7 @@ They will add to the search_history
 ```json
 {{
     "action":"retry",
-    "query':"", # search keywords, don’t be too similar to the previous keywords
+    "query':"", # search keywords, don't be too similar to the previous keywords
     "think':"",
     "evidence":"",
 }}
