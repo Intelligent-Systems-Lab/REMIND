@@ -95,7 +95,7 @@ class MemLLM():
     def save_to_long_memory(self, clear_short_memory=True):
         data = self.short_memory.dump_memory(clear_short_memory)
         self.long_memory.add_chat_logs(data)
-        print('\033[34mShort memory dump to Long memory.\033[0m')
+        print('\033[34mShort memory dump to Long memory done.\033[0m')
     # 檢查 input limit
     def _check_input_limit(self, input:str):
         token_number = self._count_token(input)

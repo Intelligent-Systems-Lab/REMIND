@@ -172,44 +172,45 @@ class WeaviateLongMemory(Base):
             summary_limit (int, optional): the limit number of the summary group. Defaults to 50.
         """
         # TODO: need a more clever way to classify chat_logs, if the origin text too large.
-        # TODO: need check chat_logs if too large.
-        
-        for i, log in enumerate(chat_logs):
-            log['id'] = i
-        log_set = set(range(0, len(chat_logs)))
-        
-        while 1:
-            # TODO: del time to reduce prompt use
-            json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
-            groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
-            # 檢查有沒有資訊遺失
-            classify_set = set()
-            for group in groups['groups']:
-                classify_set.update(group.get('chat_logs'))
-            print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
-            self.origin_chat_logs = chat_logs
-            self.classify_chat_logs = groups
-            if log_set != classify_set:
-                print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}")
-            else:
-                print(f"Fully classify")
-                break
+        chat_logs_list = [chat_logs[i:i + 10] for i in range(0, len(chat_logs), 10)]
+        for count, chat_logs in enumerate(chat_logs_list):
+            print(f"\033[34m---Chat logs batch:{count+1}---\033[0m")
+            for i, log in enumerate(chat_logs):
+                log['id'] = i
+            log_set = set(range(0, len(chat_logs)))
             
-        print("\033[34mAdding to long memory...\033[0m")
-        for group in groups['groups']:
-            children = []
-            for chat_log_id in group["chat_logs"]:
-                log = [item for item in chat_logs if item.get('id') == chat_log_id][0]
-                child = {
-                    "text":log.get('text'),
-                    "time":log.get('time')
+            while 1:
+                # TODO: del time to reduce prompt use
+                json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
+                groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+                # 檢查有沒有資訊遺失
+                classify_set = set()
+                for group in groups['groups']:
+                    classify_set.update(group.get('chat_logs'))
+                print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
+                self.origin_chat_logs = chat_logs
+                self.classify_chat_logs = groups
+                if log_set != classify_set:
+                    print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}")
+                else:
+                    print(f"Fully classify")
+                    break
+                
+            print("\033[34mAdding to long memory...\033[0m")
+            for group in groups['groups']:
+                children = []
+                for chat_log_id in group["chat_logs"]:
+                    log = [item for item in chat_logs if item.get('id') == chat_log_id][0]
+                    child = {
+                        "text":log.get('text'),
+                        "time":log.get('time')
+                    }
+                    children.append(child)
+                group = {
+                    "description":group["summary"],
+                    "child":children
                 }
-                children.append(child)
-            group = {
-                "description":group["summary"],
-                "child":children
-            }
-            self.add_group_memory(group)
+                self.add_group_memory(group)
         print("\033[34mSave chat logs to long memory done.\033[0m")
             
     def add_group_memory(self, group:dict):
