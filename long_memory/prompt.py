@@ -57,15 +57,16 @@ Information found: {search_info}
 Search history, you will see during the entire search process: {search_history}
 
 You have three actions and the output is in json format, you can write your thought into think field, 
-the evidence field preferably original memory from similar_snippets, 
+put key memory or what happen to evidence field.
 They will add to the search_history
+
 1.end: End the search when the information is sufficient
 ```json
 {{
     "action":"end",
     "reason":"sufficient", # or insufficient
     "think":"",
-    "evidence":"", 
+    "evidence":[],
 }}
 ```
 2.jump: jump to related_summaries to search
@@ -74,7 +75,7 @@ They will add to the search_history
     "action":"jump",
     "id":"", # id of related_summaries
     "think":"",
-    "evidence":"",
+    "evidence":[],
 }}
 ```
 3.retry: Search again using new keywords
@@ -83,7 +84,7 @@ They will add to the search_history
     "action":"retry",
     "query':"", # search keywords, don't be too similar to the previous keywords
     "think':"",
-    "evidence":"",
+    "evidence":[],
 }}
 ```
 """

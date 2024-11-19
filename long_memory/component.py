@@ -375,12 +375,17 @@ class WeaviateLongMemory(Base):
     def _summary_retrieve_page(self, group_description:str, relative_memory:list, other_groups:list):
         similar_snippets = []
         for m in relative_memory:
-            similar_snippets.append(m.properties["text"])
+            similar_snippets.append({
+                'text':m.properties['text'],
+                'time':m.properties['time']
+            })
+        similar_snippets = sorted(similar_snippets, key=lambda x: x["time"])
+        similar_snippets = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in similar_snippets]
         related_summaries = []
         for m in other_groups:
             related_summaries.append({
                 'id':str(m.uuid),
-                'text':m.properties['text']
+                'text':m.properties['text'],
             })
         result = {
             "closest_summary":group_description,
