@@ -225,6 +225,11 @@ class WeaviateLongMemory(Base):
         )
         # 找出向量相似度最高的 group，如果小於 distance 就合併 group 並且對 group description 進行更新
         distance = 0.2
+        # 設置組別時間
+        if group["child"][0].get("time"):
+            group_time = group["child"][0].get("time")
+        else:
+            group_time = datetime.now().isoformat(timespec='seconds') + 'Z'
         if response.objects and response.objects[0].metadata.distance < distance:
             similar_group = response.objects[0]
             similar_group_des = similar_group.properties["text"]
@@ -240,13 +245,13 @@ class WeaviateLongMemory(Base):
             # 需要優化
             else:
                 group_data = {
-                    "time": datetime.now().isoformat(timespec='seconds') + 'Z',
+                    "time": group_time,
                     "text": group_description
                 }
                 group_id = self._insert_weaviate(self.group_class, group_data)
         else:
             group_data = {
-                "time": datetime.now().isoformat(timespec='seconds') + 'Z',
+                "time": group_time,
                 "text": group_description
             }
             group_id = self._insert_weaviate(self.group_class, group_data)
