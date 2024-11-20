@@ -48,6 +48,7 @@ Article:{article}
 # (don't repeat previous evidence)
 recall_search = """Your character is assistant and you are searching your memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
+The searched memory is marked with time, so it can be used to make simple judgments.
 The following will display your current search information and search records.
 
 Query:{query}
@@ -57,8 +58,8 @@ Information found: {search_info}
 Search history, you will see during the entire search process: {search_history}
 
 You have three actions and the output is in json format, you can write your thought into think field, 
-put key memory or what happen to evidence field.
-They will add to the search_history
+put key memory or what happen to evidence field as detail as possible.
+These will add to the search_history
 
 1.end: End the search when the information is sufficient
 ```json

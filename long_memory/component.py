@@ -309,7 +309,10 @@ class WeaviateLongMemory(Base):
             similar_group = similar_groups[0]
             other_groups = similar_groups[1:]
             group_id = similar_group.uuid
-            group_description = similar_group.properties["text"]
+            group_description = {
+                "text":similar_group.properties["text"],
+                "time":similar_group.properties['time'].strftime("%Y/%m/%d %H:%M")
+            }
             relative_memory = self.get_relavant_child(query, group_id)
             retrieve_result = self._summary_retrieve_page(group_description, relative_memory, other_groups) 
             return retrieve_result
@@ -372,7 +375,7 @@ class WeaviateLongMemory(Base):
             self.recall_search_records.append(recall_search_record)
             return history
     
-    def _summary_retrieve_page(self, group_description:str, relative_memory:list, other_groups:list):
+    def _summary_retrieve_page(self, group_description:dict, relative_memory:list, other_groups:list):
         similar_snippets = []
         for m in relative_memory:
             similar_snippets.append({
@@ -386,6 +389,7 @@ class WeaviateLongMemory(Base):
             related_summaries.append({
                 'id':str(m.uuid),
                 'text':m.properties['text'],
+                'time':m.properties['time'].strftime("%Y/%m/%d %H:%M")
             })
         result = {
             "closest_summary":group_description,
