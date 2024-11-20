@@ -50,6 +50,7 @@ recall_search = """Your character is assistant and you are searching your memori
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The searched memory is marked with time, so it can be used to make simple judgments.
 The following will display your current search information and search records.
+Time now:{current_time}
 
 Query:{query}
 

@@ -172,9 +172,9 @@ class WeaviateLongMemory(Base):
             summary_limit (int, optional): the limit number of the summary group. Defaults to 50.
         """
         # TODO: need a more clever way to classify chat_logs, if the origin text too large.
-        chat_logs_list = [chat_logs[i:i + 10] for i in range(0, len(chat_logs), 10)]
+        chat_logs_list = [chat_logs[i:i + 15] for i in range(0, len(chat_logs), 15)]
         for count, chat_logs in enumerate(chat_logs_list):
-            print(f"\033[34m---Chat logs batch:{count+1}---\033[0m")
+            # print(f"\033[34m---Chat logs batch:{count+1}---\033[0m")
             for i, log in enumerate(chat_logs):
                 log['id'] = i
             log_set = set(range(0, len(chat_logs)))
@@ -187,16 +187,16 @@ class WeaviateLongMemory(Base):
                 classify_set = set()
                 for group in groups['groups']:
                     classify_set.update(group.get('chat_logs'))
-                print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
+                # print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
                 self.origin_chat_logs = chat_logs
                 self.classify_chat_logs = groups
                 if log_set != classify_set:
-                    print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}")
+                    print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}, retry..")
                 else:
-                    print(f"Fully classify")
+                    # print(f"Fully classify")
                     break
                 
-            print("\033[34mAdding to long memory...\033[0m")
+            # print("\033[34mAdding to long memory...\033[0m")
             for group in groups['groups']:
                 children = []
                 for chat_log_id in group["chat_logs"]:
@@ -220,7 +220,7 @@ class WeaviateLongMemory(Base):
         response = self.group_class.query.near_text(
             query=group_description,
             limit=1,
-            return_properties=["text"],
+            return_properties=["time", "text"],
             return_metadata=MetadataQuery(distance=True)
         )
         # 找出向量相似度最高的 group，如果小於 distance 就合併 group 並且對 group description 進行更新
@@ -255,7 +255,6 @@ class WeaviateLongMemory(Base):
                 "text": group_description
             }
             group_id = self._insert_weaviate(self.group_class, group_data)
-        
         # 插入 child
         for child in group["child"]:
             child_data = {
@@ -305,7 +304,7 @@ class WeaviateLongMemory(Base):
             response = self.group_class.query.near_text(
                 query=query,
                 limit=k,
-                return_properties=["text"],
+                return_properties=["time", "text"],
                 return_metadata=MetadataQuery(distance=True)
             )
         similar_groups = response.objects
@@ -334,7 +333,7 @@ class WeaviateLongMemory(Base):
             history = copy.deepcopy(SEARCH_HISTORY)
             for _ in range(turn):
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
-                p = recall_search.format(query=query, search_info=retrieve_result, search_history=history)
+                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history)
                 llm_res = self._llm_create(p)
                 res_dict = json.loads(re.search(r"```json(.*?)```", llm_res, re.DOTALL).group(1).strip())
                 
