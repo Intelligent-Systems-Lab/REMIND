@@ -67,9 +67,8 @@ class MemLLM():
                 # 重複
         # session end
         if end_clear:
-            # 清空 pre msg, msg queue
+            # 清空 msg queue
             self.msg_queue.clear()
-            self.pre_msg_queue.clear()
         return
     
     def _llm_create(self, prompt):
