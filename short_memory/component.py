@@ -1,5 +1,5 @@
 from short_memory.schema import LOG_SCHEMA
-from short_memory.prompt import generate_keyword
+from short_memory.prompt import generate_keyword, hyde_generated
 
 from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
@@ -102,8 +102,8 @@ class WeaviateShortMemory(Base):
 
         Args:
             query (str): the query you want to search.
-            method (str): [similarity/keyword/BM25] Search method, 'similarity' for vector-based similarity search,
-                          'keyword' for substring matching, 'BM25' use bm25 algorithm. Defaults to "similarity".
+            method (str): [similarity/keyword/BM25/HyDE] Search method, 'similarity' for vector-based similarity search,
+                          'keyword' for substring matching, 'BM25' use bm25 algorithm, 'HyDE' use HyDE method then similarity search. Defaults to "similarity".
             k (int): number of relevant memory.
             sort (bool): If true, the retrieve chat log will sort with ascending, Defaults to True.
         """
@@ -128,6 +128,15 @@ class WeaviateShortMemory(Base):
                 query=query,
                 return_metadata=MetadataQuery(score=True),
                 limit=k
+            )
+        elif method=="HyDE":
+            hyde_prompt = hyde_generated.format(query=query)
+            hyde_query = self._llm_create(hyde_prompt)
+            response = self.chatlog_class.query.near_text(
+                query=hyde_query,
+                limit=k,
+                return_properties=["text", "time"],
+                return_metadata=MetadataQuery(distance=True)
             )
         else:
             print(f"Unknow method, only can be [similarity/keyword/BM25]. Your method:{method}")
