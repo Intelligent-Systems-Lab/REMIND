@@ -1,4 +1,4 @@
-from long_memory.prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search
+from long_memory.prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search, generate_keyword, hyde_generated
 from long_memory.schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
 from long_memory.tools import tools
 
@@ -295,18 +295,46 @@ class WeaviateLongMemory(Base):
             print(f'---------------------------')
         return res["rewrite"], res.get("description")
     
-    def get_relevant_memory(self, query:str, object_id=None, k=5):
+    def get_relevant_memory(self, query:str, object_id=None, k=5, method="similarity"):
         if object_id:
             response = self.group_class.query.fetch_objects(
                 filters=Filter.by_id().equal(object_id)
             )
         else:
-            response = self.group_class.query.near_text(
-                query=query,
-                limit=k,
-                return_properties=["time", "text"],
-                return_metadata=MetadataQuery(distance=True)
-            )
+            if method=="similarity":
+                response = self.group_class.query.near_text(
+                    query=query,
+                    limit=k,
+                    return_properties=["time", "text"],
+                    return_metadata=MetadataQuery(distance=True)
+                )
+            elif method=="keyword":
+                # generate keywords by llm
+                keyword_prompt = generate_keyword.format(query=query)
+                query = eval(self._llm_create(keyword_prompt))
+                print(f'Search by keywords:{query}')
+                response = self.group_class.query.fetch_objects(
+                    filters=Filter.by_property("text").contains_any(query),
+                    limit=k
+                )
+            elif method=="BM25":
+                response = self.group_class.query.bm25(
+                    query=query,
+                    return_metadata=MetadataQuery(score=True),
+                    limit=k
+                )
+            elif method=="HyDE":
+                hyde_prompt = hyde_generated.format(query=query)
+                query = self._llm_create(hyde_prompt)
+                response = self.group_class.query.near_text(
+                    query=query,
+                    limit=k,
+                    return_properties=["text", "time"],
+                    return_metadata=MetadataQuery(distance=True)
+                )
+            else:
+                print(f"Unknow method, only can be [similarity/keyword/BM25/HyDE]. Your method:{method}")
+                return
         similar_groups = response.objects
         
         if similar_groups:
@@ -317,7 +345,7 @@ class WeaviateLongMemory(Base):
                 "text":similar_group.properties["text"],
                 "time":similar_group.properties['time'].strftime("%Y/%m/%d %H:%M")
             }
-            relative_memory = self.get_relavant_child(query, group_id)
+            relative_memory = self.get_relavant_child(query, group_id, k, method)
             retrieve_result = self._summary_retrieve_page(group_description, relative_memory, other_groups) 
             return retrieve_result
         else:
@@ -402,7 +430,7 @@ class WeaviateLongMemory(Base):
         }
         return result
     
-    def get_relavant_child(self, query:str, group_id=None, k=5):
+    def get_relavant_child(self, query:str|list, group_id=None, k=5, method="similarity"):
         if group_id:
             response = self.child_class.query.near_text(
                 query=query,
@@ -412,12 +440,24 @@ class WeaviateLongMemory(Base):
                 return_metadata=MetadataQuery(distance=True)
             )
         else:
-            response = self.child_class.query.near_text(
-                query=query,
-                limit=k,
-                return_properties=["time", "text"],
-                return_metadata=MetadataQuery(distance=True)
-            )
+            if method=="similarity" or method=="HyDE":
+                response = self.child_class.query.near_text(
+                    query=query,
+                    limit=k,
+                    return_properties=["time", "text"],
+                    return_metadata=MetadataQuery(distance=True)
+                )
+            elif method=="keyword":
+                response = self.child_class.query.fetch_objects(
+                    filters=Filter.by_property("text").contains_any(query),
+                    limit=k
+                )
+            elif method=="BM25":
+                response = self.child_class.query.bm25(
+                    query=query,
+                    return_metadata=MetadataQuery(score=True),
+                    limit=k
+                )
         return response.objects
     def update_group_memory():
         pass

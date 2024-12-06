@@ -139,7 +139,7 @@ class WeaviateShortMemory(Base):
                 return_metadata=MetadataQuery(distance=True)
             )
         else:
-            print(f"Unknow method, only can be [similarity/keyword/BM25]. Your method:{method}")
+            print(f"Unknow method, only can be [similarity/keyword/BM25/HyDE]. Your method:{method}")
             return
         retrieve_memory = []
         for data in response.objects:
