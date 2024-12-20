@@ -13,7 +13,7 @@ import re
 
 load_dotenv()
 
-class MemLLM():
+class MemoRA():
     def __init__(self, short_memory:WeaviateShortMemory=None, long_memory:WeaviateLongMemory=None, user:str="deafult", context_limit:int=1000):
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.context_limit = context_limit
