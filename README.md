@@ -1,4 +1,6 @@
-# **MemoRA : Modular Memory Retrieval Architecture for LLM systems**
+# **MemoRA**
+
+## **Modular Memory Retrieval Architecture for LLM systems**
 
 ## **Introduction**
 MemoRA is a research project focused on simulating memory functionality in Large Language Models (LLMs) using an external modular retrieval architecture. The goal is to enhance the coherence and stability of conversations by integrating knowledge retrieval seamlessly into LLM interactions.
@@ -9,10 +11,11 @@ Key highlights of MemoRA:
 - Evaluates conversational performance in terms of fluency and stability.
 
 ## **Features**
-- **Dynamic Memory Integration**: Interaction with external knowledge bases.
-- **Scalable Architecture**: Supports various retrieval mechanisms.
-- **Memory Types**: MemoRA uses short and long memory to store information. Short memory retains session-specific data, while long memory preserves more permanent, long-term knowledge.
+MemoRA uses short and long memory to store information. Short memory retains session-specific data, while long memory preserves more permanent, long-term knowledge.
 ![](./eval/structure.png)
+
+Dynamic search in long memory
+![](./eval/long_memory.png)
 
 ## **Installation**
 To get started with MemoRA, follow these steps:
