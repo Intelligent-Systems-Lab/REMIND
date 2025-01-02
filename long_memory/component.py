@@ -1,6 +1,7 @@
-from long_memory.prompt import rewrite_prompt, chatlog_classify_prompt, document_classify_prompt, recall_search, generate_keyword, hyde_generated
+from long_memory.prompt import chatlog_classify_prompt, document_classify_prompt, recall_search, generate_keyword, hyde_generated
+# from long_memory.prompt import rewrite_prompt
 from long_memory.schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
-from long_memory.tools import tools
+# from long_memory.tools import tools
 
 from weaviate.classes.query import MetadataQuery
 from weaviate.classes.query import Filter
@@ -216,7 +217,13 @@ class WeaviateLongMemory(Base):
     def add_group_memory(self, group:dict):
         
         group_description = group["description"]
+        # 設置組別時間
+        if group["child"][0].get("time"):
+            group_time = group["child"][0].get("time")
+        else:
+            group_time = datetime.now().isoformat(timespec='seconds') + 'Z'
         
+        """# 檢查是否有相似的 group
         response = self.group_class.query.near_text(
             query=group_description,
             limit=1,
@@ -225,11 +232,6 @@ class WeaviateLongMemory(Base):
         )
         # 找出向量相似度最高的 group，如果小於 distance 就合併 group 並且對 group description 進行更新
         distance = 0.2
-        # 設置組別時間
-        if group["child"][0].get("time"):
-            group_time = group["child"][0].get("time")
-        else:
-            group_time = datetime.now().isoformat(timespec='seconds') + 'Z'
         if response.objects and response.objects[0].metadata.distance < distance:
             similar_group = response.objects[0]
             similar_group_des = similar_group.properties["text"]
@@ -254,7 +256,13 @@ class WeaviateLongMemory(Base):
                 "time": group_time,
                 "text": group_description
             }
-            group_id = self._insert_weaviate(self.group_class, group_data)
+            group_id = self._insert_weaviate(self.group_class, group_data)"""
+        group_data = {
+            "time": group_time,
+            "text": group_description
+        }
+        group_id = self._insert_weaviate(self.group_class, group_data)
+        
         # 插入 child
         for child in group["child"]:
             child_data = {
@@ -275,7 +283,8 @@ class WeaviateLongMemory(Base):
             vector=vector
         )
         return data_id
-    def _rewrite_merge_des(self, description_1, description_2):
+    
+    """def _rewrite_merge_des(self, description_1, description_2):
         messages = [{"role": "user", "content": rewrite_prompt.format(description_1=description_1, description_2=description_2)}]
         completion = self.openai_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -293,7 +302,7 @@ class WeaviateLongMemory(Base):
             print(f'Second group description: {description_2}')
             print(f'Merge description: {res.get("description")}')
             print(f'---------------------------')
-        return res["rewrite"], res.get("description")
+        return res["rewrite"], res.get("description")"""
     
     def get_relevant_memory(self, query:str, object_id=None, k=5, method="similarity"):
         if object_id:
