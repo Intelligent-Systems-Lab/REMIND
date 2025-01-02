@@ -7,15 +7,17 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from openai import OpenAI
 import tiktoken
-import json
+import requests
 import os
-import re
 
 load_dotenv()
 
 class MemoRA():
-    def __init__(self, short_memory:WeaviateShortMemory=None, long_memory:WeaviateLongMemory=None, user:str="deafult", context_limit:int=1000):
+    def __init__(self, short_memory:WeaviateShortMemory=None, long_memory:WeaviateLongMemory=None, user:str="deafult", 
+                 context_limit:int=1000, model:str="gpt-4o-mini", ollama_url:str="http://localhost:8000/ollama"):
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model = model
+        self.ollama_url = ollama_url
         self.context_limit = context_limit
         if not short_memory:
             self.short_memory = WeaviateShortMemory(user=user)
@@ -72,12 +74,27 @@ class MemoRA():
         return
     
     def _llm_create(self, prompt):
-        messages = [{"role": "user", "content": prompt}]
-        completion = self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-        )
-        return completion.choices[0].message.content
+        gpt_family = ["gpt-4o-mini", "gpt-4o"]
+        ollama_family = ["llama3.3", "llama3.1", "llama3.1:405b", "gemma2:27b", "qwen2.5:32b"]
+        
+        if self.model in gpt_family:
+            messages = [{"role": "user", "content": prompt}]
+            completion = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+            )
+            return completion.choices[0].message.content
+        elif self.model in ollama_family:
+            url = self.ollama_url
+            data = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream":False
+            }
+
+            response = requests.post(url, json=data)
+            return response.json()['response']
+        
     # 壓縮到 short memory
     def _extract_to_short_memory(self):
         print("\033[34mExtracting chat log to short memory...\033[0m")
