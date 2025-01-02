@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from openai import OpenAI
 
+import requests
 import copy
 import json
 import os
@@ -47,9 +48,11 @@ class Base(ABC):
         pass
 
 class WeaviateLongMemory(Base):
-    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult"):
+    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate"):
         self.client = weaviate.connect_to_local(weaviate_url, port)
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model = model
+        self.ollama_url = ollama_url
         self.user = user
         self.group_class_name = f"{user[0].upper()+user[1:]}_long_memory_group"
         self.child_class_name = f"{user[0].upper()+user[1:]}_long_memory_child"
@@ -134,12 +137,40 @@ class WeaviateLongMemory(Base):
         return self.client.collections.list_all()
     
     def _llm_create(self, prompt):
-        messages = [{"role": "user", "content": prompt}]
-        completion = self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-        )
-        return completion.choices[0].message.content
+        gpt_family = ["gpt-4o-mini", "gpt-4o"]
+        ollama_family = ["llama3.3", "llama3.1", "llama3.1:405b", "gemma2:27b", "qwen2.5:32b"]
+        
+        if self.model in gpt_family:
+            messages = [{"role": "user", "content": prompt}]
+            completion = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+            )
+            return completion.choices[0].message.content
+        elif self.model in ollama_family:
+            url = self.ollama_url
+            data = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream":False
+            }
+
+            response = requests.post(url, json=data)
+            return response.json()['response']
+    
+    def _llm_response_handler(self, response:str):
+        """handle llm response format, especially for llama family"""
+        try:
+            return json.loads(response)
+        except:
+            response = response.strip()
+            try:
+                return json.loads(re.search(r"```json(.*?)```", response, re.DOTALL).group(1).strip())
+            except:
+                try:
+                    return json.loads(re.search(r"```(.*?)```", response, re.DOTALL).group(1).strip())
+                except:
+                    return response
     
     def add_article(self, article:str, summary_limit=100):
         json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit, article=article))
