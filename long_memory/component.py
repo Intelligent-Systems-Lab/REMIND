@@ -174,7 +174,7 @@ class WeaviateLongMemory(Base):
     
     def add_article(self, article:str, summary_limit=100):
         json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit, article=article))
-        groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+        groups = self._llm_response_handler(json_res)
         for group in groups['groups']:
             children = []
             for log in group["paragraph"]:
@@ -214,7 +214,7 @@ class WeaviateLongMemory(Base):
             while 1:
                 # TODO: del time to reduce prompt use
                 json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
-                groups = json.loads(re.search(r"```json(.*?)```", json_res, re.DOTALL).group(1).strip())
+                groups = self._llm_response_handler(json_res)
                 # 檢查有沒有資訊遺失
                 classify_set = set()
                 for group in groups['groups']:
@@ -403,7 +403,7 @@ class WeaviateLongMemory(Base):
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
                 p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history)
                 llm_res = self._llm_create(p)
-                res_dict = json.loads(re.search(r"```json(.*?)```", llm_res, re.DOTALL).group(1).strip())
+                res_dict = self._llm_response_handler(llm_res)
                 
                 # update search_history
                 history['search times']+=1

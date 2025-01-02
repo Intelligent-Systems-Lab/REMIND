@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from openai import OpenAI
 
+import requests
 import copy
 import os
 
@@ -25,9 +26,11 @@ class Base(ABC):
         pass
     
 class WeaviateShortMemory(Base):
-    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult"):
+    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate"):
         self.client = weaviate.connect_to_local(weaviate_url, port)
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model = model
+        self.ollama_url = ollama_url
         self.user = user
         self.chatlog_class_name = f"{user[0].upper()+user[1:]}_short_memory_chatlog"
         self._memory_exists()
@@ -51,12 +54,26 @@ class WeaviateShortMemory(Base):
         self.client.collections.create_from_dict(class_schema)
         
     def _llm_create(self, prompt):
-        messages = [{"role": "user", "content": prompt}]
-        completion = self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-        )
-        return completion.choices[0].message.content
+        gpt_family = ["gpt-4o-mini", "gpt-4o"]
+        ollama_family = ["llama3.3", "llama3.1", "llama3.1:405b", "gemma2:27b", "qwen2.5:32b"]
+        
+        if self.model in gpt_family:
+            messages = [{"role": "user", "content": prompt}]
+            completion = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+            )
+            return completion.choices[0].message.content
+        elif self.model in ollama_family:
+            url = self.ollama_url
+            data = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream":False
+            }
+
+            response = requests.post(url, json=data)
+            return response.json()['response']
     
     def add_chatlogs(self, chatlogs:list):
         """add chatlogs to short memory
