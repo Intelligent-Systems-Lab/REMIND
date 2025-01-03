@@ -14,7 +14,7 @@ load_dotenv()
 
 class MemoRA():
     def __init__(self, short_memory:WeaviateShortMemory=None, long_memory:WeaviateLongMemory=None, user:str="deafult", 
-                 context_limit:int=1000, model:str="gpt-4o-mini", ollama_url:str="http://localhost:8000/ollama"):
+                 context_limit:int=1000, model:str="gpt-4o-mini", ollama_url:str="http://localhost:11434/api/generate"):
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
         self.ollama_url = ollama_url
