@@ -310,7 +310,6 @@ class WeaviateLongMemory(Base):
             "text": group_description
         }
         group_id = self._insert_weaviate(self.group_class, group_data)
-        
         # 插入 child
         for child in group["child"]:
             child_data = {
@@ -408,7 +407,8 @@ class WeaviateLongMemory(Base):
         else:
             return {"system": "Don't find relevant memory"}
         
-    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4):
+    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct=None):
+        self.recall_search_records = []
         question = query
         if not recall:
             return self.get_relevant_memory(query=query, k=retrieve_number)
@@ -418,7 +418,7 @@ class WeaviateLongMemory(Base):
             history = copy.deepcopy(SEARCH_HISTORY)
             for _ in range(turn):
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
-                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history)
+                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history, other_instruct=other_instruct)
                 llm_res = self._llm_create(p)
                 res_dict = self._llm_response_handler(llm_res)
                 
@@ -436,10 +436,11 @@ class WeaviateLongMemory(Base):
                 history['thought'] = res_dict['think']
                 record = {
                     'search times':history['search times'],
+                    'next_action':res_dict['action'],
                     'used query':query,
                     'searched memory':retrieve_result["closest_summary"],
                     'thought':res_dict['think'],
-                    'evdience':history.get('evidence')
+                    'evdience':res_dict.get('evidence')
                 }
                 search_records.append(record)
                 

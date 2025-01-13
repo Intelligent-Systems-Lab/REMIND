@@ -4,7 +4,7 @@ if not, rewrite a new description"""
 
 chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
 Group chat records according to topics and summarize each group with json format.
-Each summary can't over {summary_limit} and need as detail like date, where or do what as you can.
+Each summary can't over {summary_limit} and need as detail like date, where or specific things as you can.
 Example:
 Chat logs:[
     {{'id':1, 'text':'assistant:Hi, how are you today?, user:Good. I walked in the park today'}},
@@ -57,6 +57,7 @@ Article:{article}
 recall_search = """Your character is assistant and you are searching your memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The searched memory is marked with time, so it can be used to make simple judgments.
+{other_instruct}
 The following will display your current search information and search records.
 Time now:{current_time}
 
@@ -70,7 +71,7 @@ You have three actions and the output is in json format, you can write your thou
 put key memory or what happen to evidence field as detail as possible.
 These will add to the search_history
 
-1.end: End the search when the information is sufficient
+1.end: End the search when the information is sufficient, don't say it's insufficient without finding it
 ```json
 {{
     "action":"end",
@@ -79,7 +80,7 @@ These will add to the search_history
     "evidence":[],
 }}
 ```
-2.jump: jump to related_summaries to search
+2.jump: if you see something may help in the related_summaries, use jump to see it with more detail information
 ```json
 {{
     "action":"jump",
@@ -88,11 +89,11 @@ These will add to the search_history
     "evidence":[],
 }}
 ```
-3.retry: Search again using new keywords
+3.retry: Search again using new keywords, the keyword should be very different with previous keyword to get better search
 ```json
 {{
     "action":"retry",
-    "query':"", # search keywords, don't be too similar to the previous keywords
+    "query":"", # search keywords, don't be too similar to the previous keywords
     "think':"",
     "evidence":[],
 }}
