@@ -36,19 +36,17 @@ Query: {query}"""
 document_classify_prompt = """Watch the following article, group the article according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail as you can.
 Don’t miss the origin article.
+Example:
+Article:[
+    {{'id':1, 'text':'Volcanism of the Mount Edziza volcanic complex in British Columbia, Canada, spans more than 7 million years.'}},
+    {{'id':2, 'text':'The first magmatic cycle took place between 7.5 and 6 million years ago and is represented by the Raspberry, Little Iskut and Armadillo geological formations.'}}
+]
 ```json
 {{
     "groups": [
         {{
-            "summary": "abstract of AI future and challenge, and why it's important",
-            "paragraph": [
-                {{
-                    "text": "AI has been invested in many fields and plays an important role..."
-                }},
-                {{
-                    "text": "Most AI now is mainly driven by language models..."
-                }}
-            ]
+            "summary": "The volcanism of the Mount Edziza volcanic complex in British Columbia, Canada, spans over 7 million years. The initial magmatic cycle occurred between 7.5 and 6 million years ago, represented by the Raspberry, Little Iskut, and Armadillo geological formations.",
+            "article_id": [1, 2]
         }}
     ]
 }}

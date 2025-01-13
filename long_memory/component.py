@@ -48,7 +48,7 @@ class Base(ABC):
         pass
 
 class WeaviateLongMemory(Base):
-    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate"):
+    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate", time_sort=True):
         self.client = weaviate.connect_to_local(weaviate_url, port)
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
@@ -60,6 +60,7 @@ class WeaviateLongMemory(Base):
         self.group_class = self.client.collections.get(self.group_class_name)
         self.child_class = self.client.collections.get(self.child_class_name)
         self.recall_search_records = []
+        self.time_sort = time_sort
         
         self.origin_chat_logs=""
         self.classify_chat_logs=""
@@ -172,23 +173,39 @@ class WeaviateLongMemory(Base):
                 except:
                     return response
     
-    def add_article(self, article:str, summary_limit=100):
-        json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit, article=article))
-        groups = self._llm_response_handler(json_res)
-        for group in groups['groups']:
-            children = []
-            for log in group["paragraph"]:
-                child = {
-                    "text":log.get('text'),
-                    "time":log.get('time') # time.now
-                    # "origin_text":log.get('origin_text')
+    def add_article(self, article:list, summary_limit=100):
+        article_list = [article[i:i + 15] for i in range(0, len(article), 15)]
+        for count, article in enumerate(article_list):
+            for i, log in enumerate(article):
+                log['id'] = i
+            log_set = set(range(0, len(article)))
+            
+            while 1:
+                json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit,article=article))
+                groups = self._llm_response_handler(json_res)
+                classify_set = set()
+                for group in groups['groups']:
+                    classify_set.update(group.get('article_id'))
+                if log_set != classify_set:
+                    print(f"Articles not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}, retry..")
+                else:
+                    break
+                
+            for group in groups['groups']:
+                children = []
+                for article_id in group["article_id"]:
+                    log = [item for item in article if item.get('id') == article_id][0]
+                    child = {
+                        "text":log.get('text'),
+                        "time":log.get('time')
+                    }
+                    children.append(child)
+                group = {
+                    "description":group["summary"],
+                    "child":children
                 }
-                children.append(child)
-            group = {
-                "description":group["summary"],
-                "child":children
-            }
-            self.add_group_memory(group)
+                self.add_group_memory(group)
+        print("\033[34mSave article to long memory done.\033[0m")
             
     def add_chat_logs(self, chat_logs:list, summary_limit=50):
         """add chat logs to long memory
@@ -436,6 +453,7 @@ class WeaviateLongMemory(Base):
                     object_id = res_dict['id']
                 elif action=='retry':
                     query=res_dict.get('query')
+                    object_id = ""
                 else:
                     print(f'Action unknow:{action}')
                     print(json.dumps(res_dict, indent=4))
@@ -454,8 +472,9 @@ class WeaviateLongMemory(Base):
                 'text':m.properties['text'],
                 'time':m.properties['time']
             })
-        similar_snippets = sorted(similar_snippets, key=lambda x: x["time"])
-        similar_snippets = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in similar_snippets]
+        if self.time_sort:
+            similar_snippets = sorted(similar_snippets, key=lambda x: x["time"])
+            similar_snippets = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in similar_snippets]
         related_summaries = []
         for m in other_groups:
             related_summaries.append({
