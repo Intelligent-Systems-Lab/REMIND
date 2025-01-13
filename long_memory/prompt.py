@@ -86,7 +86,7 @@ These will add to the search_history
     "action":"jump",
     "id":"", # id of related_summaries
     "think":"",
-    "evidence":[],
+    "evidence":[{{"text":"user:I like to go to park.."}}, {{"text":"user:I also like walking in.."}}],
 }}
 ```
 3.retry: Search again using new keywords, the keyword should be very different with previous keyword to get better search
