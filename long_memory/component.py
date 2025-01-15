@@ -416,9 +416,14 @@ class WeaviateLongMemory(Base):
             search_records = []
             object_id = ""
             history = copy.deepcopy(SEARCH_HISTORY)
+            tmp_candidate_group = []
             for _ in range(turn):
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
-                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history, other_instruct=other_instruct)
+                if retrieve_result['related_summaries']:
+                    tmp_candidate_group = retrieve_result['related_summaries']
+                else:
+                    retrieve_result['related_summaries'] = tmp_candidate_group
+                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), question=question, search_info=retrieve_result, search_history=history, other_instruct=other_instruct)
                 llm_res = self._llm_create(p)
                 res_dict = self._llm_response_handler(llm_res)
                 
@@ -431,8 +436,13 @@ class WeaviateLongMemory(Base):
                 if res_dict.get('evidence'):
                     if type(res_dict.get('evidence'))==str:
                         history['evidence'].append(res_dict.get('evidence'))
-                    else:
-                        history['evidence'].extend(res_dict.get('evidence'))
+                    elif type(res_dict.get('evidence'))==list:
+                        for e in res_dict.get('evidence'):
+                            if e not in history['evidence']:
+                                history['evidence'].append(e)
+                    elif type(res_dict.get('evidence'))==dict:
+                        if e not in history['evidence']:
+                            history['evidence'].append(e)
                 history['thought'] = res_dict['think']
                 record = {
                     'search times':history['search times'],
@@ -452,9 +462,10 @@ class WeaviateLongMemory(Base):
                     break
                 elif action=='jump':
                     object_id = res_dict['id']
+                    tmp_candidate_group = [item for item in tmp_candidate_group if item['id'] != object_id] # 從 candidate_group 剔除 jump 的 group
                 elif action=='retry':
                     query=res_dict.get('query')
-                    object_id = ""
+                    object_id = "" # 如果有 object_id 會變成 jump
                 else:
                     print(f'Action unknow:{action}')
                     print(json.dumps(res_dict, indent=4))

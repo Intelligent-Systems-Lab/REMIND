@@ -62,7 +62,7 @@ class HotPotWeaviateLongMemory(Base):
             child_schema["class"] = self.child_class_name
             properties = child_schema["properties"]
             properties.append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
-            properties.append({"name":"doc_id","dataType": ["text"],"moduleConfig": {"text2vec-openai": {"skip": "true"}}})
+            properties.append({"name":"doc_number","dataType": ["text"],"moduleConfig": {"text2vec-openai": {"skip": "true"}}})
             properties.pop(2)
             properties.pop(0) # del time
             child_schema["properties"] = properties
@@ -101,7 +101,7 @@ class HotPotWeaviateLongMemory(Base):
         for item in self.child_class.iterator():
             print({
                 "id":str(item.uuid),
-                "doc_id":item.properties['doc_id'],
+                "doc_number":item.properties['doc_number'],
                 "text":item.properties['text']
             })
         return
@@ -177,8 +177,8 @@ class HotPotWeaviateLongMemory(Base):
         
         for number, doc_paragraph in enumerate(doc_content):
             child_data = {
-                "text": doc_paragraph,
-                "doc_id": str(number)
+                "text": doc_paragraph.replace('"', ""), # handle json format error
+                "doc_number": str(number)
             }
             reference = {
                 "parent":group_id
@@ -275,6 +275,7 @@ class HotPotWeaviateLongMemory(Base):
                     object_id = res_dict['id']
                 elif action=='retry':
                     query=res_dict.get('query')
+                    object_id = ""
                 else:
                     print(f'Action unknow:{action}')
                     print(json.dumps(res_dict, indent=4))
@@ -291,14 +292,14 @@ class HotPotWeaviateLongMemory(Base):
         for m in relative_memory:
             similar_snippets.append({
                 'text':m.properties['text'],
-                'doc_id':str(m.uuid)
+                'doc_number':m.properties['doc_number']
             })
         related_summaries = []
         for m in other_groups:
             related_summaries.append({
                 'id':str(m.uuid),
                 'doc_name':m.properties['doc_name'],
-                # 'text':m.properties['text']
+                'text':m.properties['text']
             })
         result = {
             "closest_summary":group_description,
@@ -313,14 +314,14 @@ class HotPotWeaviateLongMemory(Base):
                 query=query,
                 filters=Filter.by_ref("parent").by_id().equal(group_id),
                 limit=k,
-                return_properties=["doc_id", "text"],
+                return_properties=["doc_number", "text"],
                 return_metadata=MetadataQuery(distance=True)
             )
         else:
             response = self.child_class.query.near_text(
                 query=query,
                 limit=k,
-                return_properties=["doc_id", "text"],
+                return_properties=["doc_number", "text"],
                 return_metadata=MetadataQuery(distance=True)
             )
         return response.objects

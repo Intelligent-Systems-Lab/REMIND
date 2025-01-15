@@ -2,9 +2,11 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
-chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
+chatlog_classify_prompt = """Watch the following chat logs, you need to save these memory to the system,
+so you need to classify dialog into groups, each group must have a similar topic or theme, otherwise it will be difficult to search
 Group chat records according to topics and summarize each group with json format.
-Each summary can't over {summary_limit} and need as detail like date, where or specific things as you can.
+Each summary can't over {summary_limit} and make sure everything is mentioned.
+
 Example:
 Chat logs:[
     {{'id':1, 'text':'assistant:Hi, how are you today?, user:Good. I walked in the park today'}},
@@ -61,7 +63,7 @@ The searched memory is marked with time, so it can be used to make simple judgme
 The following will display your current search information and search records.
 Time now:{current_time}
 
-Query:{query}
+Question:{question}
 
 Information found: {search_info}
 
