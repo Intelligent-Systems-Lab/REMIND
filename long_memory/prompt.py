@@ -55,19 +55,28 @@ Article:[
 ```
 Article:{article}
 """
-# (don't repeat previous evidence)
-recall_search = """Your character is assistant and you are searching your memories related to query from the memory bank.
+
+recall_search = """Your role is assistant and you are searching your memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The searched memory is marked with time, so it can be used to make simple judgments.
 {other_instruct}
+
 The following will display your current search information and search records.
 Time now:{current_time}
 
 Question:{question}
 
 Information found: {search_info}
+In the Inforamtion found, closest_summary is main search group, similar_snippets is original memory from the main group,
+related_summaries are other candidate group. 
+If you see some relative content in related_summaries, you can use jump action to search that group and get its original memory,
+when you need to write evidence, put original memory into evidence field is better, compressed summary is suboptimal,
+because The devil is in the details.
 
-Search history, you will see during the entire search process: {search_history}
+Search history: {search_history}
+In the Search history, search_times is turn you have iteration, used_queries contain the keywords you have used,
+searched_memory contain the group you searched, thought is your think in previous turn, evidence contain relative information to the question.
+Search history will pass to next turn.
 
 You have three actions and the output is in json format, you can write your thought into think field, 
 put key memory or what happen to evidence field as detail as possible.
@@ -95,9 +104,10 @@ These will add to the search_history
 ```json
 {{
     "action":"retry",
-    "query":"", # search keywords, don't be too similar to the previous keywords
+    "keywords":"", # search keywords, don't be too similar to the previous keywords
     "think':"",
     "evidence":[],
 }}
 ```
+Output with json format
 """

@@ -29,9 +29,9 @@ SEARCH_INFO = {
 
 # Search history used in the prompt of recall_search and final return in the recall stage
 SEARCH_HISTORY = {
-    "search times":0,
-    "used queries":[],
-    "searched memory":[],
+    "search_times":0,
+    "used_queries":[],
+    "searched_memory":[],
     "thought":"",
     "evidence":[],
 }
