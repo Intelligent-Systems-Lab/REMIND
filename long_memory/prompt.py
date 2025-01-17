@@ -2,9 +2,11 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
-chatlog_classify_prompt = """Watch the following chat logs, you need to write the memory for youself,
+chatlog_classify_prompt = """Watch the following chat logs, you need to save these memory to the system,
+so you need to classify dialog into groups, each group must have a similar topic or theme, otherwise it will be difficult to search
 Group chat records according to topics and summarize each group with json format.
-Each summary can't over {summary_limit} and need as detail like date, where or do what as you can.
+Each summary can't over {summary_limit} and make sure everything is mentioned.
+
 Example:
 Chat logs:[
     {{'id':1, 'text':'assistant:Hi, how are you today?, user:Good. I walked in the park today'}},
@@ -36,43 +38,51 @@ Query: {query}"""
 document_classify_prompt = """Watch the following article, group the article according to topics and summarize each group with json format.
 Each summary can't over {summary_limit} and need as detail as you can.
 Don’t miss the origin article.
+Example:
+Article:[
+    {{'id':1, 'text':'Volcanism of the Mount Edziza volcanic complex in British Columbia, Canada, spans more than 7 million years.'}},
+    {{'id':2, 'text':'The first magmatic cycle took place between 7.5 and 6 million years ago and is represented by the Raspberry, Little Iskut and Armadillo geological formations.'}}
+]
 ```json
 {{
     "groups": [
         {{
-            "summary": "abstract of AI future and challenge, and why it's important",
-            "paragraph": [
-                {{
-                    "text": "AI has been invested in many fields and plays an important role..."
-                }},
-                {{
-                    "text": "Most AI now is mainly driven by language models..."
-                }}
-            ]
+            "summary": "The volcanism of the Mount Edziza volcanic complex in British Columbia, Canada, spans over 7 million years. The initial magmatic cycle occurred between 7.5 and 6 million years ago, represented by the Raspberry, Little Iskut, and Armadillo geological formations.",
+            "article_id": [1, 2]
         }}
     ]
 }}
 ```
 Article:{article}
 """
-# (don't repeat previous evidence)
-recall_search = """Your character is assistant and you are searching your memories related to query from the memory bank.
+
+recall_search = """Your role is assistant and you are searching your memories related to query from the memory bank.
 If you try searching several times, it is possible that you do not have this knowledge in your memory.
 The searched memory is marked with time, so it can be used to make simple judgments.
+{other_instruct}
+
 The following will display your current search information and search records.
 Time now:{current_time}
 
-Query:{query}
+Question:{question}
 
 Information found: {search_info}
+In the Inforamtion found, closest_summary is main search group, similar_snippets is original memory from the main group,
+related_summaries are other candidate group. 
+If you see some relative content in related_summaries, you can use jump action to search that group and get its original memory,
+when you need to write evidence, put original memory into evidence field is better, compressed summary is suboptimal,
+because The devil is in the details.
 
-Search history, you will see during the entire search process: {search_history}
+Search history: {search_history}
+In the Search history, search_times is turn you have iteration, used_queries contain the keywords you have used,
+searched_memory contain the group you searched, thought is your think in previous turn, evidence contain relative information to the question.
+Search history will pass to next turn.
 
 You have three actions and the output is in json format, you can write your thought into think field, 
 put key memory or what happen to evidence field as detail as possible.
 These will add to the search_history
 
-1.end: End the search when the information is sufficient
+1.end: End the search when the information is sufficient, don't say it's insufficient without finding it
 ```json
 {{
     "action":"end",
@@ -81,22 +91,23 @@ These will add to the search_history
     "evidence":[],
 }}
 ```
-2.jump: jump to related_summaries to search
+2.jump: if you see something may help in the related_summaries, use jump to see it with more detail information
 ```json
 {{
     "action":"jump",
     "id":"", # id of related_summaries
     "think":"",
-    "evidence":[],
+    "evidence":[{{"text":"user:I like to go to park.."}}, {{"text":"user:I also like walking in.."}}],
 }}
 ```
-3.retry: Search again using new keywords
+3.retry: Search again using new keywords, the keyword should be very different with previous keyword to get better search
 ```json
 {{
     "action":"retry",
-    "query':"", # search keywords, don't be too similar to the previous keywords
+    "keywords":"", # search keywords, don't be too similar to the previous keywords
     "think':"",
     "evidence":[],
 }}
 ```
+Output with json format
 """

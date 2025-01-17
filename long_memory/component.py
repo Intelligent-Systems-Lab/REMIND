@@ -48,7 +48,7 @@ class Base(ABC):
         pass
 
 class WeaviateLongMemory(Base):
-    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate"):
+    def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate", time_sort=True):
         self.client = weaviate.connect_to_local(weaviate_url, port)
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
@@ -59,7 +59,8 @@ class WeaviateLongMemory(Base):
         self._memory_exists()
         self.group_class = self.client.collections.get(self.group_class_name)
         self.child_class = self.client.collections.get(self.child_class_name)
-        self.recall_search_records = []
+        self.recall_search_record = None
+        self.time_sort = time_sort
         
         self.origin_chat_logs=""
         self.classify_chat_logs=""
@@ -116,6 +117,29 @@ class WeaviateLongMemory(Base):
             })
         return
     
+    def show_group_and_children(self):
+        group = []
+        for item in self.group_class.iterator():
+            response = self.child_class.query.fetch_objects(
+                filters=Filter.by_ref("parent").by_id().equal(item.uuid),
+                limit=50,
+                return_properties=["time", "text"]
+            )
+            origin_conversation = []
+            for m in response.objects:
+                origin_conversation.append({
+                    'text':m.properties['text'],
+                    'time':m.properties['time']
+                })
+            if self.time_sort:
+                origin_conversation = sorted(origin_conversation, key=lambda x: x["time"])
+                origin_conversation = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in origin_conversation]
+            group.append({
+                'group':item.properties['text'],
+                'children':origin_conversation
+            })
+        return group
+    
     def group_count(self):
         count = 0
         for item in self.child_class.iterator():
@@ -129,9 +153,9 @@ class WeaviateLongMemory(Base):
         return count
     
     def dump_recall_records(self):
-        for record in self.recall_search_records:
+        for record in self.recall_search_record:
             print(json.dumps(record, indent=4))
-        return self.recall_search_records
+        return self.recall_search_record
     
     def get_schema(self):
         return self.client.collections.list_all()
@@ -172,23 +196,39 @@ class WeaviateLongMemory(Base):
                 except:
                     return response
     
-    def add_article(self, article:str, summary_limit=100):
-        json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit, article=article))
-        groups = self._llm_response_handler(json_res)
-        for group in groups['groups']:
-            children = []
-            for log in group["paragraph"]:
-                child = {
-                    "text":log.get('text'),
-                    "time":log.get('time') # time.now
-                    # "origin_text":log.get('origin_text')
+    def add_article(self, article:list, summary_limit=100):
+        article_list = [article[i:i + 15] for i in range(0, len(article), 15)]
+        for count, article in enumerate(article_list):
+            for i, log in enumerate(article):
+                log['id'] = i
+            log_set = set(range(0, len(article)))
+            
+            while 1:
+                json_res = self._llm_create(document_classify_prompt.format(summary_limit=summary_limit,article=article))
+                groups = self._llm_response_handler(json_res)
+                classify_set = set()
+                for group in groups['groups']:
+                    classify_set.update(group.get('article_id'))
+                if log_set != classify_set:
+                    print(f"Articles not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}, retry..")
+                else:
+                    break
+                
+            for group in groups['groups']:
+                children = []
+                for article_id in group["article_id"]:
+                    log = [item for item in article if item.get('id') == article_id][0]
+                    child = {
+                        "text":log.get('text'),
+                        "time":log.get('time')
+                    }
+                    children.append(child)
+                group = {
+                    "description":group["summary"],
+                    "child":children
                 }
-                children.append(child)
-            group = {
-                "description":group["summary"],
-                "child":children
-            }
-            self.add_group_memory(group)
+                self.add_group_memory(group)
+        print("\033[34mSave article to long memory done.\033[0m")
             
     def add_chat_logs(self, chat_logs:list, summary_limit=50):
         """add chat logs to long memory
@@ -293,7 +333,6 @@ class WeaviateLongMemory(Base):
             "text": group_description
         }
         group_id = self._insert_weaviate(self.group_class, group_data)
-        
         # 插入 child
         for child in group["child"]:
             child_data = {
@@ -391,7 +430,8 @@ class WeaviateLongMemory(Base):
         else:
             return {"system": "Don't find relevant memory"}
         
-    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4):
+    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct=None):
+        self.recall_search_record = []
         question = query
         if not recall:
             return self.get_relevant_memory(query=query, k=retrieve_number)
@@ -399,32 +439,48 @@ class WeaviateLongMemory(Base):
             search_records = []
             object_id = ""
             history = copy.deepcopy(SEARCH_HISTORY)
+            tmp_candidate_group = []
+            
             for _ in range(turn):
+                
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
-                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), query=query, search_info=retrieve_result, search_history=history)
+                
+                if retrieve_result['related_summaries']:
+                    tmp_candidate_group = retrieve_result['related_summaries']
+                else:
+                    retrieve_result['related_summaries'] = tmp_candidate_group
+                
+                if query not in history['used_queries']:
+                    history['used_queries'].append(query)
+                if retrieve_result["closest_summary"] not in history['searched_memory']:
+                    history['searched_memory'].append(retrieve_result["closest_summary"])
+                
+                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), question=question, search_info=retrieve_result, search_history=history, other_instruct=other_instruct)
+                # print(p)
                 llm_res = self._llm_create(p)
                 res_dict = self._llm_response_handler(llm_res)
                 
-                # update search_history
-                history['search times']+=1
-                if query not in history['used queries']:
-                    history['used queries'].append(query)
-                if retrieve_result["closest_summary"] not in history['searched memory']:
-                    history['searched memory'].append(retrieve_result["closest_summary"])
+                history['search_times']+=1
                 if res_dict.get('evidence'):
                     if type(res_dict.get('evidence'))==str:
                         history['evidence'].append(res_dict.get('evidence'))
-                    else:
-                        history['evidence'].extend(res_dict.get('evidence'))
+                    elif type(res_dict.get('evidence'))==list:
+                        for e in res_dict.get('evidence'):
+                            if e not in history['evidence']:
+                                history['evidence'].append(e)
+                    elif type(res_dict.get('evidence'))==dict:
+                        if e not in history['evidence']:
+                            history['evidence'].append(e)
                 history['thought'] = res_dict['think']
-                record = {
-                    'search times':history['search times'],
-                    'used query':query,
+                
+                search_records.append({
+                    'search_times':history['search_times'],
+                    'used_query':query,
                     'searched memory':retrieve_result["closest_summary"],
                     'thought':res_dict['think'],
-                    'evdience':history.get('evidence')
-                }
-                search_records.append(record)
+                    'evdience':res_dict.get('evidence'),
+                    'next_action':res_dict['action']
+                })
                 
                 action = res_dict['action']
                 if action=='end':
@@ -434,17 +490,20 @@ class WeaviateLongMemory(Base):
                     break
                 elif action=='jump':
                     object_id = res_dict['id']
+                    tmp_candidate_group = [item for item in tmp_candidate_group if item['id'] != object_id] # 從 candidate_group 剔除 jump 的 group
                 elif action=='retry':
-                    query=res_dict.get('query')
+                    query=res_dict.get('keywords')
+                    object_id = "" # 如果有 object_id 會變成 jump
                 else:
                     print(f'Action unknow:{action}')
                     print(json.dumps(res_dict, indent=4))
                     break
+                
             recall_search_record = {
-                "query":question,
+                "Question":question,
                 "records":search_records
             }
-            self.recall_search_records.append(recall_search_record)
+            self.recall_search_record = recall_search_record
             return history
     
     def _summary_retrieve_page(self, group_description:dict, relative_memory:list, other_groups:list):
@@ -454,8 +513,9 @@ class WeaviateLongMemory(Base):
                 'text':m.properties['text'],
                 'time':m.properties['time']
             })
-        similar_snippets = sorted(similar_snippets, key=lambda x: x["time"])
-        similar_snippets = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in similar_snippets]
+        if self.time_sort:
+            similar_snippets = sorted(similar_snippets, key=lambda x: x["time"])
+            similar_snippets = [{"text": item["text"], "time": item["time"].strftime("%Y/%m/%d %H:%M")} for item in similar_snippets]
         related_summaries = []
         for m in other_groups:
             related_summaries.append({
