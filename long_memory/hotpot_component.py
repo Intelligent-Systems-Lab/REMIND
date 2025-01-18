@@ -299,7 +299,7 @@ class HotPotWeaviateLongMemory(Base):
             related_summaries.append({
                 'id':str(m.uuid),
                 'doc_name':m.properties['doc_name'],
-                'text':m.properties['text']
+                # 'text':m.properties['text']
             })
         result = {
             "closest_summary":group_description,

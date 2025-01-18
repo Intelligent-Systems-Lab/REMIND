@@ -2,26 +2,29 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
-chatlog_classify_prompt = """Watch the following chat logs, you need to save these memory to the system,
-so you need to classify dialog into groups, each group must have a similar topic or theme, otherwise it will be difficult to search
-Group chat records according to topics and summarize each group with json format.
-Each summary can't over {summary_limit} and make sure everything is mentioned.
+chatlog_classify_prompt = """Please analyze the following chat logs. Your task is to classify the conversations into groups based on similar topics or themes and summarize each group. 
+Follow these requirements:
+1. Group chat records by topics or themes. Each group should include related conversations.
+2. Summarize each group in JSON format, ensuring the summary covers all key points within the group.
+3. Each summary must not exceed {summary_limit} characters. If necessary, make the summary concise but comprehensive.
+4. Ensure every chat log is included in at least one group.
+5. Use the following JSON format for the output:
 
 Example:
-Chat logs:[
-    {{'id':1, 'text':'assistant:Hi, how are you today?, user:Good. I walked in the park today'}},
-    {{'id':2, 'text':'user:I saw dogs and a parrot, it can speak chinese!, assistant:That's really gread!'}}
+Chat logs: [
+    {{"id": 1, "text": "assistant: Hi, how are you today? user: Good. I walked in the park today."}},
+    {{"id": 2, "text": "user: I saw dogs and a parrot, it can speak Chinese! assistant: That's really great!"}}
 ]
+Output:
 ```json
 {{
     "groups": [
         {{
-            "summary": "user walked in the park today and saw some dogs and a parrot that can speak chinese",
+            "summary": "The user walked in the park, saw dogs and a parrot that can speak Chinese.",
             "chat_logs": [1, 2]
         }}
     ]
 }}
-```
 Chat logs:{chat_logs}
 """
 
@@ -67,16 +70,15 @@ Time now:{current_time}
 Question:{question}
 
 Information found: {search_info}
-In the Inforamtion found, closest_summary is main search group, similar_snippets is original memory from the main group,
-related_summaries are other candidate group. 
-If you see some relative content in related_summaries, you can use jump action to search that group and get its original memory,
-when you need to write evidence, put original memory into evidence field is better, compressed summary is suboptimal,
-because The devil is in the details.
+In the Inforamtion found,
+1. closest_summary is main search group, similar_snippets is original memory from the main group, related_summaries are other candidate group. 
+2. If you see some relative content in related_summaries, you can use jump action to search that group and get its original memory,
+3. when you need to write evidence, put original memory into evidence field is better, compressed summary is suboptimal, because The devil is in the details.
 
 Search history: {search_history}
-In the Search history, search_times is turn you have iteration, used_queries contain the keywords you have used,
-searched_memory contain the group you searched, thought is your think in previous turn, evidence contain relative information to the question.
-Search history will pass to next turn.
+In the Search history,
+1. search_times is turn you have iteration, used_queries contain the keywords you have used, searched_memory contain the group you searched, thought is your think in previous turn, evidence contain relative information to the question.
+2. Search history will pass to next turn.
 
 You have three actions and the output is in json format, you can write your thought into think field, 
 put key memory or what happen to evidence field as detail as possible.
@@ -105,9 +107,9 @@ These will add to the search_history
 {{
     "action":"retry",
     "keywords":"", # search keywords, don't be too similar to the previous keywords
-    "think':"",
+    "think":"",
     "evidence":[],
 }}
 ```
-Output with json format
+Use the JSON format for the output:
 """
