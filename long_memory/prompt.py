@@ -6,9 +6,10 @@ chatlog_classify_prompt = """Please analyze the following chat logs. Your task i
 Follow these requirements:
 1. Group chat records by topics or themes. Each group should include related conversations.
 2. Summarize each group in JSON format, ensuring the summary covers all key points within the group.
-3. Each summary must not exceed {summary_limit} characters. If necessary, make the summary concise but comprehensive.
+3. Each summary must not exceed {summary_limit} words, make the summary concise but comprehensive.
 4. Ensure every chat log is included in at least one group.
-5. Use the following JSON format for the output:
+5. Use the following JSON format for the output.
+{other_instruct}
 
 Example:
 Chat logs: [
@@ -20,7 +21,7 @@ Output:
 {{
     "groups": [
         {{
-            "summary": "The user walked in the park, saw dogs and a parrot that can speak Chinese.",
+            "summary": "User walked in the park, seeing dogs and a parrot that can speak Chinese. Assistant expresses enthusiasm.",
             "chat_logs": [1, 2]
         }}
     ]
@@ -59,57 +60,53 @@ Article:[
 Article:{article}
 """
 
-recall_search = """Your role is assistant and you are searching your memories related to query from the memory bank.
-If you try searching several times, it is possible that you do not have this knowledge in your memory.
-The searched memory is marked with time, so it can be used to make simple judgments.
+recall_search = """Your role is assistant, and your task is to search your memory bank for information related to the provided query.
+Try using different method to get the information.
 {other_instruct}
 
-The following will display your current search information and search records.
-Time now:{current_time}
-
-Question:{question}
+### Current State
+- **Time Now:**{current_time}
+- **Question:**{question}
 
 Information found: {search_info}
-In the Inforamtion found,
-1. closest_summary is main search group, similar_snippets is original memory from the main group, related_summaries are other candidate group. 
-2. If you see some relative content in related_summaries, you can use jump action to search that group and get its original memory,
-3. when you need to write evidence, put original memory into evidence field is better, compressed summary is suboptimal, because The devil is in the details.
+### Found Information
+The following contains the search results:
+1. **Closest Summary:** The most relevant memory group to the query.
+2. **Similar Snippets:** Original content from the main memory group.
+3. **Related Summaries:** Other potentially relevant memory groups (you can jump to retrieve their details).
 
 Search history: {search_history}
-In the Search history,
-1. search_times is turn you have iteration, used_queries contain the keywords you have used, searched_memory contain the group you searched, thought is your think in previous turn, evidence contain relative information to the question.
-2. Search history will pass to next turn.
+### Search History
+Includes the keywords used, and the information retrieved in previous turns.
 
-You have three actions and the output is in json format, you can write your thought into think field, 
-put key memory or what happen to evidence field as detail as possible.
-These will add to the search_history
-
-1.end: End the search when the information is sufficient, don't say it's insufficient without finding it
+### Actions
+Respond in JSON format. Choose one of these actions and follow the specified format:
+1.**End the search:** Use this when sufficient information has been found.
 ```json
 {{
     "action":"end",
     "reason":"sufficient", # or insufficient
     "think":"",
-    "evidence":[],
+    "evidence":["Similar Snippets supporting the answer, {{"text":"original text or dialog"}}"],
 }}
 ```
-2.jump: if you see something may help in the related_summaries, use jump to see it with more detail information
+2.**Jump to related summaries:** Sometimes information is hidden in other groups, even if it is not visible from the summary.
 ```json
 {{
     "action":"jump",
-    "id":"", # id of related_summaries
-    "think":"",
-    "evidence":[{{"text":"user:I like to go to park.."}}, {{"text":"user:I also like walking in.."}}],
-}}
-```
-3.retry: Search again using new keywords, the keyword should be very different with previous keyword to get better search
-```json
-{{
-    "action":"retry",
-    "keywords":"", # search keywords, don't be too similar to the previous keywords
+    "id":"related_summary_id",
     "think":"",
     "evidence":[],
 }}
 ```
-Use the JSON format for the output:
+3.**Retry with new keywords:** Use when Use when no relevant information is found in the current search.
+```json
+{{
+    "action":"retry",
+    "keywords":"New search keywords, the keyword should be very different with previous keyword to get better search",
+    "think":"",
+    "evidence":[],
+}}
+```
+Use the JSON and double quote format for the output:
 """

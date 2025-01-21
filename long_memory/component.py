@@ -230,7 +230,7 @@ class WeaviateLongMemory(Base):
                 self.add_group_memory(group)
         print("\033[34mSave article to long memory done.\033[0m")
             
-    def add_chat_logs(self, chat_logs:list, summary_limit=50):
+    def add_chat_logs(self, chat_logs:list, summary_limit=50, other_instruct=None):
         """add chat logs to long memory
 
         Args:
@@ -244,7 +244,7 @@ class WeaviateLongMemory(Base):
             summary_limit (int, optional): the limit number of the summary group. Defaults to 50.
         """
         # TODO: need a more clever way to classify chat_logs, if the origin text too large.
-        chat_logs_list = [chat_logs[i:i + 15] for i in range(0, len(chat_logs), 15)]
+        chat_logs_list = [chat_logs[i:i + 10] for i in range(0, len(chat_logs), 10)]
         for count, chat_logs in enumerate(chat_logs_list):
             # print(f"\033[34m---Chat logs batch:{count+1}---\033[0m")
             for i, log in enumerate(chat_logs):
@@ -253,7 +253,7 @@ class WeaviateLongMemory(Base):
             
             while 1:
                 # TODO: del time to reduce prompt use
-                json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs))
+                json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs, other_instruct=other_instruct))
                 groups = self._llm_response_handler(json_res)
                 # 檢查有沒有資訊遺失
                 classify_set = set()
@@ -450,8 +450,8 @@ class WeaviateLongMemory(Base):
                 else:
                     retrieve_result['related_summaries'] = tmp_candidate_group
                 
-                if query not in history['used_queries']:
-                    history['used_queries'].append(query)
+                if query not in history['used_keywords']:
+                    history['used_keywords'].append(query)
                 if retrieve_result["closest_summary"] not in history['searched_memory']:
                     history['searched_memory'].append(retrieve_result["closest_summary"])
                 
@@ -461,21 +461,24 @@ class WeaviateLongMemory(Base):
                 res_dict = self._llm_response_handler(llm_res)
                 
                 history['search_times']+=1
-                if res_dict.get('evidence'):
-                    if type(res_dict.get('evidence'))==str:
-                        history['evidence'].append(res_dict.get('evidence'))
-                    elif type(res_dict.get('evidence'))==list:
-                        for e in res_dict.get('evidence'):
+                try:
+                    if res_dict.get('evidence'):
+                        if type(res_dict.get('evidence'))==str:
+                            history['evidence'].append(res_dict.get('evidence'))
+                        elif type(res_dict.get('evidence'))==list:
+                            for e in res_dict.get('evidence'):
+                                if e not in history['evidence']:
+                                    history['evidence'].append(e)
+                        elif type(res_dict.get('evidence'))==dict:
                             if e not in history['evidence']:
                                 history['evidence'].append(e)
-                    elif type(res_dict.get('evidence'))==dict:
-                        if e not in history['evidence']:
-                            history['evidence'].append(e)
+                except:
+                    print(f"Response format error:{res_dict}")
                 history['thought'] = res_dict['think']
                 
                 search_records.append({
                     'search_times':history['search_times'],
-                    'used_query':query,
+                    'used_kewords':query,
                     'searched memory':retrieve_result["closest_summary"],
                     'thought':res_dict['think'],
                     'evdience':res_dict.get('evidence'),
