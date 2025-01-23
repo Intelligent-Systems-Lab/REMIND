@@ -231,7 +231,7 @@ Respond in JSON format. Choose one of these actions and follow the specified for
     "evidence":[],
 }}
 ```
-3.**Retry with new keywords:** Use when Use when no relevant information is found in the current search.
+3.**Retry with new keywords:** Use to re-search when no relevant information is found in the current search.
 ```json
 {{
     "action":"retry",

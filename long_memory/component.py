@@ -50,7 +50,10 @@ class Base(ABC):
 class WeaviateLongMemory(Base):
     def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate", time_sort=True):
         self.client = weaviate.connect_to_local(weaviate_url, port)
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        if model in ["gpt-4o-mini", "gpt-4o"]:
+            self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        elif model in ["deepseek-chat"]:
+            self.openai_client = OpenAI(api_key=os.getenv("DEEP_SEEK_API_KEY"), base_url="https://api.deepseek.com/v1")
         self.model = model
         self.ollama_url = ollama_url
         self.user = user
@@ -161,13 +164,13 @@ class WeaviateLongMemory(Base):
         return self.client.collections.list_all()
     
     def _llm_create(self, prompt):
-        gpt_family = ["gpt-4o-mini", "gpt-4o"]
+        gpt_family = ["gpt-4o-mini", "gpt-4o", "deepseek-chat"]
         ollama_family = ["llama3.3", "llama3.1", "llama3.1:405b", "gemma2:27b", "qwen2.5:32b"]
         
         if self.model in gpt_family:
             messages = [{"role": "user", "content": prompt}]
             completion = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=messages,
             )
             return completion.choices[0].message.content
