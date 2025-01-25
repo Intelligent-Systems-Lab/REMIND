@@ -67,6 +67,7 @@ class WeaviateLongMemory(Base):
         
         self.origin_chat_logs=""
         self.classify_chat_logs=""
+        self.classify_chat_logs_try=0
     
     def _memory_exists(self):
         if self._class_exists(self.group_class_name):
@@ -246,6 +247,7 @@ class WeaviateLongMemory(Base):
                 ```
             summary_limit (int, optional): the limit number of the summary group. Defaults to 50.
         """
+        self.classify_chat_logs_try=0
         # TODO: need a more clever way to classify chat_logs, if the origin text too large.
         chat_logs_list = [chat_logs[i:i + 10] for i in range(0, len(chat_logs), 10)]
         for count, chat_logs in enumerate(chat_logs_list):
@@ -255,6 +257,9 @@ class WeaviateLongMemory(Base):
             log_set = set(range(0, len(chat_logs)))
             
             while 1:
+                
+                self.classify_chat_logs_try+=1
+                
                 # TODO: del time to reduce prompt use
                 json_res = self._llm_create(chatlog_classify_prompt.format(summary_limit=summary_limit,chat_logs=chat_logs, other_instruct=other_instruct))
                 groups = self._llm_response_handler(json_res)

@@ -2,7 +2,7 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
-old_chatlog_classify_prompt = """You are an advanced AI assistant tasked with classifying a large dataset of conversations into thematic groups. The dataset consists of thousands of conversations between two parties, covering various topics such as greetings, viewpoints, agreements, disagreements, facts, news, activities, memory, dreams, and changes of mind or viewpoints over time, etc. Your goal is to analyze the conversations, group them by theme, and ensure consistency in the grouping criteria.
+chatlog_classify_prompt = """You are an advanced AI assistant tasked with classifying a large dataset of conversations into thematic groups. The dataset consists of thousands of conversations between two parties, covering various topics such as greetings, viewpoints, agreements, disagreements, facts, news, activities, memory, dreams, and changes of mind or viewpoints over time, etc. Your goal is to analyze the conversations, group them by theme, and ensure consistency in the grouping criteria.
 
 ### Instructions:
 
@@ -35,7 +35,7 @@ Output:
 Chat logs:{chat_logs}
 """
 
-chatlog_classify_prompt = """Please analyze the following chat logs. Your task is to classify the conversations into groups based on similar topics or themes and summarize each group. 
+old_chatlog_classify_prompt = """Please analyze the following chat logs. Your task is to classify the conversations into groups based on similar topics or themes and summarize each group. 
 Follow these requirements:
 1. Group chat records by topics or themes. Each group should include related conversations.
 2. Summarize each group in JSON format, ensuring the summary covers all key points within the group.
@@ -93,7 +93,7 @@ Article:[
 Article:{article}
 """
 
-old_recall_search = """You are an advanced AI assistant tasked with retrieving relevant information from a memory bank to answer a user's query. The memory bank contains grouped conversations and summaries. You will employ a strategy balancing **exploitation** (ending the search when sufficient information is found) and **exploration** (continuing to search for potentially better or complementary information) to deliver the most comprehensive and accurate response.
+recall_search = """You are an advanced AI assistant tasked with retrieving relevant information from a memory bank to answer a user's query. The memory bank contains grouped conversations and summaries. You will employ a strategy balancing **exploitation** (ending the search when sufficient information is found) and **exploration** (continuing to search for potentially better or complementary information) to deliver the most comprehensive and accurate response.
 {other_instruct}
 
 ### Current State
@@ -192,7 +192,7 @@ Input Information: {search_info}
 
 Search history: {search_history}"""
 
-recall_search = """Your role is assistant, and your task is to search your memory bank for information related to the provided query.
+old_recall_search = """Your role is assistant, and your task is to search your memory bank for information related to the provided query.
 Try using different method to get the information.
 {other_instruct}
 
