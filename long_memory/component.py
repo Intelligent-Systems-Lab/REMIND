@@ -50,9 +50,9 @@ class Base(ABC):
 class WeaviateLongMemory(Base):
     def __init__(self, weaviate_url="127.0.0.1", port=8080, user="deafult", model="gpt-4o-mini", ollama_url="http://localhost:11434/api/generate", time_sort=True):
         self.client = weaviate.connect_to_local(weaviate_url, port)
-        if model in ["gpt-4o-mini", "gpt-4o"]:
+        if model in ["gpt-4o-mini", "gpt-4o", "o3-mini"]:
             self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        elif model in ["deepseek-chat"]:
+        elif model in ["deepseek-chat", "deepseek-reasoner"]:
             self.openai_client = OpenAI(api_key=os.getenv("DEEP_SEEK_API_KEY"), base_url="https://api.deepseek.com/v1")
         self.model = model
         self.ollama_url = ollama_url
@@ -165,7 +165,7 @@ class WeaviateLongMemory(Base):
         return self.client.collections.list_all()
     
     def _llm_create(self, prompt):
-        gpt_family = ["gpt-4o-mini", "gpt-4o", "deepseek-chat"]
+        gpt_family = ["gpt-4o-mini", "gpt-4o", "o3-mini", "deepseek-chat", "deepseek-reasoner"]
         ollama_family = ["llama3.3", "llama3.1", "llama3.1:405b", "gemma2:27b", "qwen2.5:32b"]
         
         if self.model in gpt_family:
@@ -438,8 +438,8 @@ class WeaviateLongMemory(Base):
         else:
             return {"system": "Don't find relevant memory"}
         
-    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct=None):
-        self.recall_search_record = []
+    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct=""):
+        self.recall_search_record = {}
         question = query
         if not recall:
             return self.get_relevant_memory(query=query, k=retrieve_number)

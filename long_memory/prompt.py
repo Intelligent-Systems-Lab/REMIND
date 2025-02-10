@@ -35,33 +35,6 @@ Output:
 Chat logs:{chat_logs}
 """
 
-old_chatlog_classify_prompt = """Please analyze the following chat logs. Your task is to classify the conversations into groups based on similar topics or themes and summarize each group. 
-Follow these requirements:
-1. Group chat records by topics or themes. Each group should include related conversations.
-2. Summarize each group in JSON format, ensuring the summary covers all key points within the group.
-3. Each summary must not exceed {summary_limit} words, make the summary concise but comprehensive.
-4. Ensure every chat log is included in at least one group.
-5. Use the following JSON format for the output.
-{other_instruct}
-
-Example:
-Chat logs: [
-    {{"id": 1, "text": "assistant: Hi, how are you today? user: Good. I walked in the park today."}},
-    {{"id": 2, "text": "user: I saw dogs and a parrot, it can speak Chinese! assistant: That's really great!"}}
-]
-Output:
-```json
-{{
-    "groups": [
-        {{
-            "summary": "User walked in the park, seeing dogs and a parrot that can speak Chinese. Assistant expresses enthusiasm.",
-            "chat_logs": [1, 2]
-        }}
-    ]
-}}
-Chat logs:{chat_logs}
-"""
-
 hyde_generated="""You are a helpful assistant. Write a hypothetical passage that directly addresses the following query:
 Query: {query}
 The passage should provide a detailed and coherent response, even if the content is hypothetical. Ensure it is relevant to the query."""
@@ -104,9 +77,9 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
 
 1. **Input Information**:
    - You are provided with:
-     - The closest group's summary (from the top-k group summaries).
-     - The top-k conversations within that group (ranked by cosine similarity using embeddings).
-     - Summaries of the remaining top-k groups.
+     - The closest group's summary in closest_summary field (from the top-k group summaries).
+     - The top-k conversations within that group in similar_snippets field(ranked by cosine similarity using embeddings).
+     - Summaries of the remaining top-k groups in related_summaries field.
      - Search history, including:
        - Previously used queries (including rewritten ones).
        - Conversations or group summaries selected in each round (if any).
@@ -122,7 +95,7 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
    - Exploration involves taking actions such as jump or retry even when the current information might seem sufficient. F
    - For instance, if a recent conversation mentions, "I like sushi," but an older one states, "I have no particular preference for Japanese or Chinese food," consider exploring further to ensure a comprehensive answer to a query like, "Sushi or Chinese for lunch?"
    - Keep exploration cautious and deliberate, as it may increase token usage and time. Always weigh the potential value of additional information against its cost.
-
+   - If different groups contain similar information, jump to the group to see its original content and put it in the evidence, directly use groups summary may missing details.
 4. **Search History Utilization**:
    - Record each round of the search process in the search history:
       . Include the selected group summaries and conversations, along with the action taken in that round (e.g., jump, retry, or end).
@@ -191,54 +164,3 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
 Input Information: {search_info}
 
 Search history: {search_history}"""
-
-old_recall_search = """Your role is assistant, and your task is to search your memory bank for information related to the provided query.
-Try using different method to get the information.
-{other_instruct}
-
-### Current State
-- **Time Now:**{current_time}
-- **Question:**{question}
-
-Information found: {search_info}
-### Found Information
-The following contains the search results:
-1. **Closest Summary:** The most relevant memory group to the query.
-2. **Similar Snippets:** Original content from the main memory group.
-3. **Related Summaries:** Other potentially relevant memory groups (you can jump to retrieve their details).
-
-Search history: {search_history}
-### Search History
-Includes the keywords used, and the information retrieved in previous turns.
-
-### Actions
-Respond in JSON format. Choose one of these actions and follow the specified format:
-1.**End the search:** Use this when sufficient information has been found.
-```json
-{{
-    "action":"end",
-    "reason":"sufficient", # or insufficient
-    "think":"",
-    "evidence":["Similar Snippets supporting the answer, {{"text":"original text or dialog"}}"],
-}}
-```
-2.**Jump to related summaries:** Sometimes information is hidden in other groups, even if it is not visible from the summary.
-```json
-{{
-    "action":"jump",
-    "id":"related_summary_id",
-    "think":"",
-    "evidence":[],
-}}
-```
-3.**Retry with new keywords:** Use to re-search when no relevant information is found in the current search.
-```json
-{{
-    "action":"retry",
-    "keywords":"New search keywords, the keyword should be very different with previous keyword to get better search",
-    "think":"",
-    "evidence":[],
-}}
-```
-Use the JSON and double quote format for the output:
-"""
