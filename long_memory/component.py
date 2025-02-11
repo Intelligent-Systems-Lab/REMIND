@@ -234,7 +234,7 @@ class WeaviateLongMemory(Base):
                 self.add_group_memory(group)
         print("\033[34mSave article to long memory done.\033[0m")
             
-    def add_chat_logs(self, chat_logs:list, summary_limit=50, other_instruct=None):
+    def add_chat_logs(self, chat_logs:list, summary_limit=50, other_instruct=""):
         """add chat logs to long memory
 
         Args:

@@ -95,7 +95,9 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
    - Exploration involves taking actions such as jump or retry even when the current information might seem sufficient. F
    - For instance, if a recent conversation mentions, "I like sushi," but an older one states, "I have no particular preference for Japanese or Chinese food," consider exploring further to ensure a comprehensive answer to a query like, "Sushi or Chinese for lunch?"
    - Keep exploration cautious and deliberate, as it may increase token usage and time. Always weigh the potential value of additional information against its cost.
-   - If different groups contain similar information, jump to the group to see its original content and put it in the evidence, directly use groups summary may missing details.
+   - Although different groups have related information, you should jump to that group to read the original message.
+   - Even if the information you find is only slightly relevant, you can put it in evidence field.
+
 4. **Search History Utilization**:
    - Record each round of the search process in the search history:
       . Include the selected group summaries and conversations, along with the action taken in that round (e.g., jump, retry, or end).
