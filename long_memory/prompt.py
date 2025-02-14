@@ -150,11 +150,11 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
     "evidence": [
         {{
             "text": "user:I like sushi",
-            'time': '2024/11/01 12:04'
+            "time": "2024/11/01 12:04"
         }},
         {{
             "text": "user:I have no particular preference for Japanese or Chinese food.",
-            'time': '2024/9/01 12:05'
+            "time": "2024/9/01 12:05"
         }}
     ]
 }}
