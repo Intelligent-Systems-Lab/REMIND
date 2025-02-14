@@ -90,13 +90,10 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
    - **Jump to another group**: Select a different group if its summary suggests it may contain more relevant information.
    - **Retry with a rewritten query**: If the retrieved information is insufficient, rewrite the user query to trigger a fresh retrieval of top-k groups and their top-k conversations.
 
-3. **Balancing Exploitation and Exploration**:
-   - Aim to end the search promptly when the retrieved information seems sufficient, but occasionally prioritize exploration to uncover potentially overlooked or complementary details.
-   - Exploration involves taking actions such as jump or retry even when the current information might seem sufficient. F
-   - For instance, if a recent conversation mentions, "I like sushi," but an older one states, "I have no particular preference for Japanese or Chinese food," consider exploring further to ensure a comprehensive answer to a query like, "Sushi or Chinese for lunch?"
-   - Keep exploration cautious and deliberate, as it may increase token usage and time. Always weigh the potential value of additional information against its cost.
-   - Although different groups have related information, you should jump to that group to read the original message.
-   - Even if the information you find is only slightly relevant, you can put it in evidence field.
+3. **Exploration**:
+   - Different groups may have related information, you should jump to that group to read the original message.
+   - You can put any helpful or relvant information into evidence field, that will help the process later.
+   - Even if you feel the evidence is sufficient, if another group has the potential to have relevant information, you can jump to see that group.
 
 4. **Search History Utilization**:
    - Record each round of the search process in the search history:
