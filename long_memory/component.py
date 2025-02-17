@@ -15,6 +15,7 @@ from openai import OpenAI
 import requests
 import copy
 import json
+import ast
 import os
 import re
 
@@ -185,6 +186,16 @@ class WeaviateLongMemory(Base):
 
             response = requests.post(url, json=data)
             return response.json()['response']
+        else:
+            url = self.ollama_url
+            data = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream":False
+            }
+
+            response = requests.post(url, json=data)
+            return response.json()['response']
     
     def _llm_response_handler(self, response:str):
         """handle llm response format, especially for llama family"""
@@ -198,7 +209,10 @@ class WeaviateLongMemory(Base):
                 try:
                     return json.loads(re.search(r"```(.*?)```", response, re.DOTALL).group(1).strip())
                 except:
-                    return response
+                    try:
+                        return ast.literal_eval(re.search(r"```json(.*?)```", response, re.DOTALL).group(1).strip())
+                    except:
+                        return response
     
     def add_article(self, article:list, summary_limit=100):
         article_list = [article[i:i + 15] for i in range(0, len(article), 15)]
