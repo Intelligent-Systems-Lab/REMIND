@@ -467,6 +467,9 @@ class WeaviateLongMemory(Base):
                 
                 retrieve_result = self.get_relevant_memory(query=query, object_id=object_id, k=retrieve_number)
                 
+                if retrieve_result=={"system": "Don't find relevant memory"}:
+                    return {"system": "No relevant memory in long memory"}
+                    
                 if retrieve_result['related_summaries']:
                     tmp_candidate_group = retrieve_result['related_summaries']
                 else:
