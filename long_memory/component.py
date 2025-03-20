@@ -1,4 +1,4 @@
-from long_memory.prompt import chatlog_classify_prompt, document_classify_prompt, recall_search, generate_keyword, hyde_generated
+from long_memory.prompt import chatlog_classify_prompt, document_classify_prompt, recall_search, generate_keyword, hyde_generated, compress_prompt
 # from long_memory.prompt import rewrite_prompt
 from long_memory.schema import GROUP_SCHEMA, CHILD_SCHEMA, SEARCH_HISTORY
 # from long_memory.tools import tools
@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from datetime import datetime
 from openai import OpenAI
-
+import tiktoken
 import requests
 import copy
 import json
@@ -20,6 +20,10 @@ import os
 import re
 
 load_dotenv()
+
+def count_tokens(text: str, model: str = "text-embedding-3-small") -> int:
+    encoder = tiktoken.encoding_for_model(model)
+    return len(encoder.encode(text, allowed_special={'<|endoftext|>'}))
 
 class Base(ABC):
     # 儲存
@@ -84,7 +88,7 @@ class WeaviateLongMemory(Base):
             print("Detect empty child memory, create memory space...")
             child_schema = copy.deepcopy(CHILD_SCHEMA)
             child_schema["class"] = self.child_class_name
-            child_schema["properties"] = CHILD_SCHEMA["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
+            child_schema["properties"].append({"name":"parent", "dataType": [f"{self.group_class_name}"]})
             self._create_class(child_schema)
     
     # 檢查這個 class 存不存在    
@@ -147,7 +151,7 @@ class WeaviateLongMemory(Base):
     
     def group_count(self):
         count = 0
-        for item in self.child_class.iterator():
+        for item in self.group_class.iterator():
             count+=1
         return count
     
@@ -284,6 +288,7 @@ class WeaviateLongMemory(Base):
                 # print(f"Saving record to self.origin_chat_logs, self.classify_chat_logs.")
                 self.origin_chat_logs = chat_logs
                 self.classify_chat_logs = groups
+                # TODO: 這邊要改成用上一個錯誤的地方去修改來避免一樣的錯誤
                 if log_set != classify_set:
                     print(f"Chat logs not correct, missing id:{log_set.difference(classify_set)}, unknown id:{classify_set.difference(log_set)}, retry..")
                 else:
@@ -368,7 +373,14 @@ class WeaviateLongMemory(Base):
             vector = child.get("vector")
             self._insert_weaviate(self.child_class, child_data, vector, reference)
         return
+    
     def _insert_weaviate(self, class_collection, data, vector=None, references=None):
+        
+        token = count_tokens(data["text"])
+        if token > 8191:
+            # Weaviate have bug, get error when 'origin_text' is setting skip embedding.
+            data['origin_text'] = data['text']
+            data['text'] = self._llm_create(compress_prompt.format(content=data['text']))
         data_id = class_collection.data.insert(
             properties=data,
             references=references,
@@ -452,7 +464,7 @@ class WeaviateLongMemory(Base):
         else:
             return {"system": "Don't find relevant memory"}
         
-    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct=""):
+    def get_memory(self, query:str, retrieve_number=5, recall=False, turn=4, other_instruct="", current_time=datetime.now().strftime("%Y/%m/%d %H:%M")):
         self.recall_search_record = {}
         question = query
         if not recall:
@@ -480,7 +492,7 @@ class WeaviateLongMemory(Base):
                 if retrieve_result["closest_summary"] not in history['searched_memory']:
                     history['searched_memory'].append(retrieve_result["closest_summary"])
                 
-                p = recall_search.format(current_time=datetime.now().strftime("%Y/%m/%d %H:%M"), question=question, search_info=retrieve_result, search_history=history, other_instruct=other_instruct)
+                p = recall_search.format(current_time=current_time, question=question, search_info=retrieve_result, search_history=history, other_instruct=other_instruct, turn=turn)
                 # print(p)
                 llm_res = self._llm_create(p)
                 res_dict = self._llm_response_handler(llm_res)

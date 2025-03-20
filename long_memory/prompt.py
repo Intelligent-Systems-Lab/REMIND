@@ -2,6 +2,9 @@ rewrite_prompt = """You are a rewriter, you have two descriptions, they need to 
 first is {description_1}, second is {description_2}, if first has enough information that don't have to rewrite, 
 if not, rewrite a new description"""
 
+compress_prompt = """Please condense the following content into a shorter, more concise version while maintaining the key information and main points.
+Content: {content}"""
+
 chatlog_classify_prompt = """You are an advanced AI assistant tasked with classifying a large dataset of conversations into thematic groups. The dataset consists of thousands of conversations between two parties, covering various topics such as greetings, viewpoints, agreements, disagreements, facts, news, activities, memory, dreams, and changes of mind or viewpoints over time, etc. Your goal is to analyze the conversations, group them by theme, and ensure consistency in the grouping criteria.
 
 ### Instructions:
@@ -92,9 +95,10 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
    - **Retry with a rewritten query**: If the retrieved information is insufficient, rewrite the user query to trigger a fresh retrieval of top-k groups and their top-k conversations.
 
 3. **Exploration**:
-   - Different groups may have related information, you should jump to that group to read the original message.
+   - Time may be helpful for the search.
    - You can put any helpful or relvant information into evidence field, that will help the process later.
    - Even if you feel the evidence is sufficient, if another group has the potential to have relevant information, you can jump to see that group.
+   - Question may require multiple group to find clues, you can try breaking the question into smaller, specific elements to rewrite the query for the search.
 
 4. **Search History Utilization**:
    - Record each round of the search process in the search history:
@@ -127,13 +131,13 @@ recall_search = """You are an advanced AI assistant tasked with retrieving relev
 ```json
 {{
     "action":"retry",
-    "keywords":"",
+    "keywords":"New search keywords, the keyword should be very different with previous keyword to get better search",
     "think":"",
     "evidence":[],
 }}
 ```
 6. **Limits**:
-   - The maximum number of search rounds is capped at `4`. Use this limit effectively to balance thoroughness and efficiency.
+   - The maximum number of search rounds is capped at `{turn}`. Use this limit effectively to balance thoroughness and efficiency.
 
 7. **Evaluation Criteria**:
    - Your goal is to maximize the relevance and completeness of retrieved information.
